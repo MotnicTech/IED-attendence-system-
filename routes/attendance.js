@@ -7,13 +7,47 @@ const cron = require('node-cron');
 const { pool } = require('../db');
  
 const EXCEL_PATH = path.join(__dirname, '../data/attendance.xlsx');
+const TIME_ZONE = process.env.APP_TIMEZONE || 'Asia/Kolkata';
+
+function getZonedParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  }).formatToParts(date);
+
+  return parts.reduce((acc, part) => {
+    if (part.type !== 'literal') acc[part.type] = part.value;
+    return acc;
+  }, {});
+}
 
 function getLocalDateKey(date = new Date()) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const zoned = getZonedParts(date);
+  return `${zoned.year}-${zoned.month}-${zoned.day}`;
 }
 
 function getMonthYearKey(date = new Date()) {
-  return `${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(2)}`;
+  const zoned = getZonedParts(date);
+  return `${zoned.month}/${String(zoned.year).slice(2)}`;
+}
+
+function getIstTimestampString(date = new Date()) {
+  const zoned = getZonedParts(date);
+  const ms = String(date.getMilliseconds()).padStart(3, '0');
+  return `${zoned.year}-${zoned.month}-${zoned.day} ${zoned.hour}:${zoned.minute}:${zoned.second}.${ms}`;
+}
+
+function getIstTimeLabel(value) {
+  if (!value) return null;
+  const text = String(value);
+  const timePart = text.includes('T') ? text.split('T')[1] : text.split(' ')[1] || text;
+  return timePart.slice(0, 8);
 }
 
 function toNumberOrNull(value) {
@@ -31,11 +65,7 @@ function buildMapLink(latitude, longitude) {
 
 function formatTimeLabel(dateValue) {
   if (!dateValue) return null;
-  return new Date(dateValue).toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
+  return getIstTimeLabel(dateValue);
 }
 
 async function getTodayAttendanceState(employeeEmail) {
@@ -78,8 +108,7 @@ function appendToExcel(rowData) {
   const sheetName = wb.SheetNames.includes('10020012') ? '10020012' : wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
   const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-  const now = new Date(rowData.timestamp);
-  const monthStr = getMonthYearKey(now);
+  const monthStr = rowData.monthYear || getMonthYearKey(new Date());
   const latitude = toNumberOrNull(rowData.latitude);
   const longitude = toNumberOrNull(rowData.longitude);
   data.push([
@@ -97,7 +126,8 @@ function appendToExcel(rowData) {
 }
 
 async function saveToDB(employeeEmail, rowData) {
-  const now = new Date(rowData.timestamp || new Date());
+  const now = new Date();
+  const timestampString = getIstTimestampString(now);
   const dateOnly = getLocalDateKey(now);
   const monthYear = getMonthYearKey(now);
   const statusText = String(rowData.status || '').trim().toLowerCase();
@@ -136,16 +166,16 @@ async function saveToDB(employeeEmail, rowData) {
       `INSERT INTO attendance_logs
        (emp_email, status, latitude, longitude, location_name, punch_time, punch_in_time, punch_out_time,
         in_location, out_location, in_latitude, in_longitude, out_latitude, out_longitude,
-        in_map_link, out_map_link, date, month_year, map_link)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
+        in_map_link, out_map_link, date, month_year, map_link, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
       [
         employeeEmail,
         rowData.status,
         latitude,
         longitude,
         locationLabel,
-        now,
-        now,
+        timestampString,
+        timestampString,
         null,
         locationLabel,
         null,
@@ -157,7 +187,8 @@ async function saveToDB(employeeEmail, rowData) {
         null,
         dateOnly,
         monthYear,
-        mapLink
+        mapLink,
+        timestampString
       ]
     );
     return;
@@ -190,7 +221,7 @@ async function saveToDB(employeeEmail, rowData) {
       latitude,
       longitude,
       locationLabel,
-      now,
+      timestampString,
       locationLabel,
       latitude,
       longitude,
@@ -216,7 +247,7 @@ async function autoPunchOutPendingRecords(referenceTime = new Date()) {
   let updatedCount = 0;
 
   for (const record of pending.rows) {
-    const closeTime = new Date(`${record.date}T23:59:59.000`);
+    const closeTime = `${record.date} 23:59:59.000`;
     await pool.query(
       `UPDATE attendance_logs
           SET status = $2,
@@ -234,7 +265,8 @@ async function autoPunchOutPendingRecords(referenceTime = new Date()) {
         latitude: '',
         longitude: '',
         locationName: 'System Auto Punch-Out',
-        timestamp: closeTime.toISOString()
+        timestamp: closeTime,
+        monthYear: getMonthYearKey(new Date(`${record.date}T12:00:00`))
       });
     } catch (excelErr) {
       console.error('Excel auto punch-out sync error:', excelErr.message);
@@ -257,7 +289,7 @@ function scheduleAutoPunchOut() {
       console.error('Auto punch-out job failed:', err.message);
     }
   }, {
-    timezone: process.env.CRON_TIMEZONE || undefined
+    timezone: TIME_ZONE
   });
 }
 
@@ -292,9 +324,10 @@ router.post('/punch', async (req, res) => {
     if (!status || !latitude || !longitude) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
-    await saveToDB(employeeEmail, { email: employeeEmail, status, latitude, longitude, locationName, timestamp });
+    const punchTimestamp = getIstTimestampString(new Date());
+    await saveToDB(employeeEmail, { email: employeeEmail, status, latitude, longitude, locationName, timestamp: punchTimestamp });
     try {
-      appendToExcel({ email: employeeEmail, status, latitude, longitude, locationName, timestamp });
+      appendToExcel({ email: employeeEmail, status, latitude, longitude, locationName, timestamp: punchTimestamp, monthYear: getMonthYearKey(new Date()) });
     } catch (excelErr) {
       console.error('Excel save error (non-fatal):', excelErr.message);
     }

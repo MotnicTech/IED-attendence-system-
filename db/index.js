@@ -1,4 +1,8 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+types.setTypeParser(1114, value => value);
+types.setTypeParser(1184, value => value);
+types.setTypeParser(1082, value => value);
 
 // Build pool config from either DATABASE_URL or individual DB_* env vars
 const poolConfig = {};
@@ -32,7 +36,7 @@ async function initDB() {
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
         name VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT NOW()
+        created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Kolkata')
       );
 
       CREATE TABLE IF NOT EXISTS attendance_logs (
@@ -56,7 +60,7 @@ async function initDB() {
         date DATE NOT NULL,
         month_year VARCHAR(10),
         map_link TEXT,
-        created_at TIMESTAMP DEFAULT NOW()
+        created_at TIMESTAMP DEFAULT (NOW() AT TIME ZONE 'Asia/Kolkata')
       );
 
       CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance_logs(date);
@@ -74,6 +78,8 @@ async function initDB() {
       ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS out_longitude DECIMAL(10, 6);
       ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS in_map_link TEXT;
       ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS out_map_link TEXT;
+      ALTER TABLE attendance_logs ALTER COLUMN created_at SET DEFAULT (NOW() AT TIME ZONE 'Asia/Kolkata');
+      ALTER TABLE hr_users ALTER COLUMN created_at SET DEFAULT (NOW() AT TIME ZONE 'Asia/Kolkata');
     `);
  
     await client.query(`

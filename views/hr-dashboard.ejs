@@ -229,8 +229,8 @@
         <tbody>
           <% records.forEach((r,i)=>{ %>
           <%
-            const inT  = r.punch_in_time  ? new Date(r.punch_in_time)  : null;
-            const outT = r.punch_out_time ? new Date(r.punch_out_time) : null;
+            const inT  = r.punch_in_time || null;
+            const outT = r.punch_out_time || null;
             const hrs  = r.hours_worked   ? parseFloat(r.hours_worked)  : null;
             let dayStatus = '—', badgeClass = 'b-none';
             if(hrs !== null){
@@ -242,13 +242,13 @@
           <tr>
             <td style="color:var(--g400); font-weight:500;"><%= i+1 %></td>
             <td class="emp-col"><%= r.emp_email %></td>
-            <td style="white-space:nowrap"><%= new Date(r.date).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) %></td>
+            <td style="white-space:nowrap"><%= formatIstDate(r.date) %></td>
             <td style="color:var(--g600); font-size:11px; font-weight:500;"><%= r.month_year||'—' %></td>
 
             <!-- IN column -->
             <td>
               <% if(inT){ %>
-                <span style="color:#15803d" class="time-val">🟢 <%= inT.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) %></span>
+                <span style="color:#15803d" class="time-val">🟢 <%= formatIstTime(inT) %></span>
               <% }else{ %><span style="color:var(--g400)">—</span><% } %>
             </td>
             <td class="loc-val" title="<%= r.in_location||'' %>"><%= r.in_location ? (r.in_location.length>35 ? r.in_location.substring(0,32)+'…' : r.in_location) : '—' %></td>
@@ -261,7 +261,7 @@
             <!-- OUT column -->
             <td>
               <% if(outT){ %>
-                <span style="color:#1d4ed8" class="time-val">🔵 <%= outT.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) %></span>
+                <span style="color:#1d4ed8" class="time-val">🔵 <%= formatIstTime(outT) %></span>
               <% }else{ %><span style="color:var(--g400)">—</span><% } %>
             </td>
             <td class="loc-val" title="<%= r.out_location||'' %>"><%= r.out_location ? (r.out_location.length>35 ? r.out_location.substring(0,32)+'…' : r.out_location) : '—' %></td>
@@ -284,10 +284,34 @@
   </div>
 </main> 
 
+<%
+  function formatIstDate(value) {
+    if (!value) return '—';
+    const text = String(value);
+    const datePart = text.includes('T') ? text.split('T')[0] : text.split(' ')[0];
+    const [year, month, day] = datePart.split('-');
+    if (!year || !month || !day) return text;
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${day} ${months[parseInt(month, 10) - 1] || month} ${year}`;
+  }
+
+  function formatIstTime(value) {
+    if (!value) return '—';
+    const text = String(value);
+    const timePart = text.includes('T') ? text.split('T')[1] : text.split(' ')[1] || text;
+    return timePart.slice(0, 5);
+  }
+%>
+
 <script>
   // DOM elements for date filters
   const d1=document.getElementById('d1'), d2=document.getElementById('d2');
-  const fmt=d=>d.toISOString().split('T')[0];
+  const fmt=d=>{
+    const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+    const map={};
+    parts.forEach(p=>{ if(p.type!=='literal') map[p.type]=p.value; });
+    return `${map.year}-${map.month}-${map.day}`;
+  };
   
   function setToday(){
     const t=new Date();
