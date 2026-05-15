@@ -1,0 +1,386 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --green: #22c55e;
+  --green-dark: #16a34a;
+  --red: #ef4444;
+  --red-dark: #b91c1c;
+  --blue: #3b82f6;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-400: #9ca3af;
+  --gray-600: #4b5563;
+  --gray-800: #1f2937;
+  --white: #ffffff;
+  --shadow: 0 10px 40px rgba(0,0,0,0.12);
+  --radius: 16px;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.wrapper {
+  width: 100%;
+  max-width: 480px;
+}
+
+/* ── HEADER ── */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px 16px;
+  color: white;
+}
+.logo {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+/* Logo image styles */
+.site-logo { height: 28px; width: auto; vertical-align: middle; display: inline-block; object-fit: contain; }
+.logo-text { margin-left: 8px; vertical-align: middle; color: white; font-weight:700; font-size:16px; }
+.modal-logo-img { height: 40px; width: auto; display: block; margin: 0 auto 8px; object-fit: contain; }
+
+/* HR header logo (override in HR view) */
+.h-logo-img { height: 28px; width: auto; display: inline-block; vertical-align: middle; object-fit: contain; margin-right:8px }
+
+/* make header compact so logo appears small top-left */
+header { padding: 6px 8px; }
+.header-email {
+  font-size: 12px;
+  opacity: 0.85;
+  background: rgba(255,255,255,0.2);
+  padding: 4px 10px;
+  border-radius: 20px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+
+/* ── STATUS BANNER ── */
+.status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 14px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+.status-banner.success { background: #dcfce7; color: #15803d; }
+.status-banner.error { background: #fee2e2; color: #b91c1c; }
+.status-banner.loading { background: #dbeafe; color: #1d4ed8; }
+
+.pulse-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 1.5s infinite;
+  flex-shrink: 0;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+/* ── EMP INFO ── */
+.emp-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+.avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.emp-email {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-800);
+  word-break: break-all;
+}
+.emp-date {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin-top: 3px;
+}
+
+/* ── INFO GRID ── */
+.info-grid {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+.info-label {
+  font-size: 12px;
+  color: var(--gray-400);
+  font-weight: 500;
+}
+.info-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+  max-width: 220px;
+  text-align: right;
+}
+
+/* ── DIVIDER ── */
+.divider {
+  border: none;
+  border-top: 1px solid var(--gray-200);
+  margin: 20px 0;
+}
+
+/* ── TODAY RECORD ── */
+.today-record {
+  background: var(--gray-50);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+.record-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--gray-400);
+  margin-bottom: 10px;
+}
+.record-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.record-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  background: white;
+  border-radius: 10px;
+  padding: 10px;
+  border: 2px solid var(--gray-200);
+}
+.record-item.in { border-color: var(--green); }
+.record-item.out { border-color: var(--red); }
+.rec-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.record-item.in .rec-label { color: var(--green-dark); }
+.record-item.out .rec-label { color: var(--red-dark); }
+.rec-time {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-800);
+}
+.record-arrow { font-size: 18px; color: var(--gray-400); }
+
+/* ── BUTTONS ── */
+.btn-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.btn {
+  padding: 16px 12px;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: 'Inter', sans-serif;
+}
+.btn:not(:disabled):active { transform: scale(0.97); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-in {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  box-shadow: 0 4px 15px rgba(34,197,94,0.35);
+}
+.btn-in:not(:disabled):hover { box-shadow: 0 6px 20px rgba(34,197,94,0.5); }
+.btn-in.done { background: #dcfce7; color: #15803d; box-shadow: none; }
+
+.btn-out {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: white;
+  box-shadow: 0 4px 15px rgba(239,68,68,0.35);
+}
+.btn-out:not(:disabled):hover { box-shadow: 0 6px 20px rgba(239,68,68,0.5); }
+.btn-out.done { background: #fee2e2; color: #b91c1c; box-shadow: none; }
+
+.btn-icon { font-size: 18px; }
+
+/* ── MESSAGE BOX ── */
+.msg {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.msg.error { background: #fee2e2; color: #b91c1c; }
+.msg.success { background: #dcfce7; color: #15803d; }
+
+/* ── DOWNLOAD ── */
+.download-row {
+  text-align: center;
+  margin-top: 16px;
+}
+.download-link {
+  color: rgba(255,255,255,0.85);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.download-link:hover { color: white; text-decoration: underline; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #1f2937;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 999;
+  max-width: 360px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── EMAIL MODAL ── */
+.email-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.modal-box {
+  background: white;
+  border-radius: 20px;
+  padding: 36px 28px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+.modal-logo {
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+.modal-box h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin-bottom: 8px;
+}
+.modal-box p {
+  font-size: 13px;
+  color: var(--gray-600);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.modal-box input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--gray-200);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  margin-bottom: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.modal-box input:focus { border-color: #667eea; }
+.modal-box button {
+  width: 100%;
+  padding: 13px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  margin-bottom: 14px;
+  transition: opacity 0.2s;
+}
+.modal-box button:hover { opacity: 0.9; }
+.modal-note {
+  font-size: 11.5px;
+  color: var(--gray-400);
+  line-height: 1.5;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 360px) {
+  .card { padding: 20px 16px; }
+  .btn { font-size: 13px; padding: 14px 8px; }
+}

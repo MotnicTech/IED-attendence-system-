@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IED Attendance System</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <div class="wrapper">
+    <!-- Header -->
+    <header>
+      <div class="logo">
+        <img src="/images/IED_LOGO.jpg" alt="IED" class="site-logo" onerror="this.style.display='none'" />
+        <span class="logo-text">IED Attendance</span>
+      </div>
+      <div class="header-email" id="headerEmail">Detecting account...</div>
+    </header>
+
+    <!-- Main Card -->
+    <main>
+      <div class="card" id="mainCard">
+
+        <!-- Status Banner -->
+        <div class="status-banner" id="statusBanner">
+          <div class="pulse-dot"></div>
+          <span id="statusText">Fetching your location...</span>
+        </div>
+
+        <!-- Employee Info -->
+        <div class="emp-info">
+          <div class="avatar" id="avatarInitial">?</div>
+          <div class="emp-details">
+            <div class="emp-email" id="empEmail">Loading account...</div>
+            <div class="emp-date" id="empDate">—</div>
+          </div>
+        </div>
+
+        <!-- Location Info -->
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">📍 Location</span>
+            <span class="info-value" id="locationName">Fetching...</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">🕐 Time</span>
+            <span class="info-value" id="currentTime">—</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">🌐 Coordinates</span>
+            <span class="info-value" id="coordsDisplay">—</span>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <hr class="divider" />
+
+        <!-- Today's Record -->
+        <div class="today-record" id="todayRecord" style="display:none">
+          <div class="record-title">Today's Record</div>
+          <div class="record-row">
+            <span class="record-item in" id="recordIn">
+              <span class="rec-label">IN</span>
+              <span class="rec-time" id="inTime">—</span>
+            </span>
+            <span class="record-arrow">→</span>
+            <span class="record-item out" id="recordOut">
+              <span class="rec-label">OUT</span>
+              <span class="rec-time" id="outTime">—</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="btn-group">
+          <button class="btn btn-in" id="btnIn" onclick="punch('Punch In')" disabled>
+            <span class="btn-icon">🟢</span>
+            Punch IN
+          </button>
+          <button class="btn btn-out" id="btnOut" onclick="punch('Punch Out')" disabled>
+            <span class="btn-icon">🔴</span>
+            Punch OUT
+          </button>
+        </div>
+
+        <!-- Error / Info Message -->
+        <div class="msg" id="msgBox" style="display:none"></div>
+
+      </div>
+
+      <!-- Download Link -->
+      <div class="download-row" style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap">
+        <!-- <a href="/hr/login" class="download-link">🏢 HR Portal</a> -->
+      </div>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <script>
+    // ─── STATE ────────────────────────────────────────────────────────────────
+    let userEmail = '';
+    let userLat = null;
+    let userLng = null;
+    let locationName = '';
+    let sessionLog = JSON.parse(sessionStorage.getItem('attendanceLog') || '{}');
+
+    // ─── INIT ─────────────────────────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', () => {
+      updateClock();
+      setInterval(updateClock, 1000);
+      detectEmail();
+    });
+
+    // ─── EMAIL DETECTION ─────────────────────────────────────────────────────
+    function detectEmail() {
+      // Try to get from logged-in Google account via accounts.google.com hint
+      // Since we can't directly access browser accounts, we use a prompt as fallback
+      // But first, check sessionStorage cache
+      const cached = sessionStorage.getItem('userEmail');
+      if (cached) {
+        setEmail(cached);
+        startLocation();
+        return;
+      }
+
+      // Try Google One Tap / FedCM silent login hint
+      // Fallback: ask user their email (no password, just email identifier)
+      showEmailModal();
+    }
+
+    function showEmailModal() {
+      const modal = document.createElement('div');
+      modal.className = 'email-modal';
+      modal.innerHTML = `
+        <div class="modal-box">
+            <div class="modal-logo">
+              <img src="/images/ied-logo.png" alt="IED" class="modal-logo-img" onerror="this.style.display='none'" />
+            </div>
+          <h2>Enter Your Email</h2>
+          <p>Your registered Gmail ID (same as your Google account on this device)</p>
+          <input type="email" id="emailInput" placeholder="yourname@gmail.com" autocomplete="email" />
+          <button onclick="confirmEmail()">Continue →</button>
+          <div class="modal-note">⚠️ Use the same Gmail that is registered in attendance records.</div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      setTimeout(() => document.getElementById('emailInput').focus(), 100);
+      document.getElementById('emailInput').addEventListener('keydown', e => {
+        if (e.key === 'Enter') confirmEmail();
+      });
+    }
+
+    function confirmEmail() {
+      const input = document.getElementById('emailInput');
+      const email = input.value.trim().toLowerCase();
+      if (!email.includes('@') || !email.includes('.')) {
+        input.style.borderColor = '#e53e3e';
+        input.placeholder = 'Valid email required!';
+        return;
+      }
+      sessionStorage.setItem('userEmail', email);
+      document.querySelector('.email-modal').remove();
+      setEmail(email);
+      startLocation();
+    }
+
+    function setEmail(email) {
+      userEmail = email;
+      document.getElementById('empEmail').textContent = email;
+      document.getElementById('headerEmail').textContent = email;
+      const initial = email[0].toUpperCase();
+      document.getElementById('avatarInitial').textContent = initial;
+
+      // Restore today's session log
+      const today = new Date().toDateString();
+      if (sessionLog[email] && sessionLog[email].date === today) {
+        const log = sessionLog[email];
+        if (log.inTime) {
+          document.getElementById('inTime').textContent = log.inTime;
+          document.getElementById('todayRecord').style.display = 'block';
+        }
+        if (log.outTime) {
+          document.getElementById('outTime').textContent = log.outTime;
+        }
+        updateButtonState(log.inTime, log.outTime);
+      }
+    }
+
+    // ─── LOCATION ─────────────────────────────────────────────────────────────
+    function startLocation() {
+      setStatus('Fetching location...', 'loading');
+      if (!navigator.geolocation) {
+        setStatus('Geolocation not supported', 'error');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(onLocationSuccess, onLocationError, {
+        enableHighAccuracy: true,
+        timeout: 10000
+      });
+    }
+
+    function onLocationSuccess(pos) {
+      userLat = pos.coords.latitude.toFixed(6);
+      userLng = pos.coords.longitude.toFixed(6);
+      document.getElementById('coordsDisplay').textContent = `${userLat}, ${userLng}`;
+      setStatus('Location found ✓', 'success');
+      reverseGeocode(userLat, userLng);
+      enableButtons();
+    }
+
+    function onLocationError(err) {
+      setStatus('Location access denied — please allow location', 'error');
+      locationName = 'Unknown';
+      document.getElementById('locationName').textContent = 'Location not available';
+      enableButtons(); // still allow punch with unknown location
+    }
+
+    function reverseGeocode(lat, lng) {
+      fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=15&accept-language=en`)
+        .then(r => r.json())
+        .then(data => {
+          const addr = data.address;
+          locationName = addr.suburb || addr.neighbourhood || addr.village ||
+                         addr.town || addr.city || addr.county || 'Unknown';
+          document.getElementById('locationName').textContent = locationName;
+        })
+        .catch(() => {
+          locationName = `${lat}, ${lng}`;
+          document.getElementById('locationName').textContent = locationName;
+        });
+    }
+
+    // ─── CLOCK ────────────────────────────────────────────────────────────────
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-IN');
+      document.getElementById('empDate').textContent = now.toLocaleDateString('en-IN', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+      });
+    }
+
+    // ─── BUTTONS ──────────────────────────────────────────────────────────────
+    function enableButtons() {
+      if (!userEmail) return;
+      const today = new Date().toDateString();
+      const log = sessionLog[userEmail];
+      updateButtonState(log?.date === today ? log.inTime : null, log?.date === today ? log.outTime : null);
+    }
+
+    function updateButtonState(inTime, outTime) {
+      const btnIn = document.getElementById('btnIn');
+      const btnOut = document.getElementById('btnOut');
+      btnIn.disabled = !!inTime;   // disable IN if already punched in
+      btnOut.disabled = !inTime || !!outTime; // OUT only after IN, and only once
+      if (inTime) btnIn.classList.add('done');
+      if (outTime) btnOut.classList.add('done');
+    }
+
+    // ─── PUNCH ────────────────────────────────────────────────────────────────
+    async function punch(status) {
+      if (!userEmail) return showMsg('Email not detected', 'error');
+      if (!userLat) {
+        showMsg('Location not yet available. Please wait...', 'error');
+        startLocation();
+        return;
+      }
+
+      const now = new Date();
+      const timestamp = now.toISOString();
+      const timeStr = now.toLocaleTimeString('en-IN');
+
+      // Optimistic UI update
+      const btnId = status === 'Punch In' ? 'btnIn' : 'btnOut';
+      const btn = document.getElementById(btnId);
+      btn.disabled = true;
+      btn.textContent = '⏳ Saving...';
+
+      try {
+        const res = await fetch('/punch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: userEmail,
+            status,
+            latitude: userLat,
+            longitude: userLng,
+            locationName: locationName || 'Unknown',
+            timestamp
+          })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          // Update session log
+          const today = now.toDateString();
+          if (!sessionLog[userEmail] || sessionLog[userEmail].date !== today) {
+            sessionLog[userEmail] = { date: today, inTime: null, outTime: null };
+          }
+
+          if (status === 'Punch In') {
+            sessionLog[userEmail].inTime = timeStr;
+            document.getElementById('inTime').textContent = timeStr;
+            btn.innerHTML = '<span class="btn-icon">✅</span> IN Recorded';
+            btn.classList.add('done');
+            document.getElementById('btnOut').disabled = false;
+          } else {
+            sessionLog[userEmail].outTime = timeStr;
+            document.getElementById('outTime').textContent = timeStr;
+            btn.innerHTML = '<span class="btn-icon">✅</span> OUT Recorded';
+            btn.classList.add('done');
+          }
+
+          document.getElementById('todayRecord').style.display = 'block';
+          sessionStorage.setItem('attendanceLog', JSON.stringify(sessionLog));
+          showToast(`✅ ${status} at ${timeStr} — ${locationName}`);
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = status === 'Punch In'
+            ? '<span class="btn-icon">🟢</span> Punch IN'
+            : '<span class="btn-icon">🔴</span> Punch OUT';
+          showMsg(data.message || 'Something went wrong', 'error');
+        }
+      } catch (err) {
+        btn.disabled = false;
+        showMsg('Network error. Check connection.', 'error');
+      }
+    }
+
+    // ─── HELPERS ──────────────────────────────────────────────────────────────
+    function setStatus(text, type) {
+      const banner = document.getElementById('statusBanner');
+      const statusText = document.getElementById('statusText');
+      statusText.textContent = text;
+      banner.className = 'status-banner ' + type;
+    }
+
+    function showMsg(text, type) {
+      const box = document.getElementById('msgBox');
+      box.textContent = text;
+      box.className = 'msg ' + type;
+      box.style.display = 'block';
+      setTimeout(() => box.style.display = 'none', 4000);
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 3500);
+    }
+  </script>
+</body>
+</html>
