@@ -75,7 +75,7 @@ async function initDB() {
       ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS in_map_link TEXT;
       ALTER TABLE attendance_logs ADD COLUMN IF NOT EXISTS out_map_link TEXT;
     `);
-
+ 
     await client.query(`
       UPDATE attendance_logs
       SET punch_in_time = COALESCE(punch_in_time, punch_time),
