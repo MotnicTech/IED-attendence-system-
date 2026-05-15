@@ -6,7 +6,7 @@ const { passport, buildAuthRouter } = require('./routes/auth');
 const { initDB } = require('./db');
 
 const attendanceRoutes = require('./routes/attendance');
-const hrRoutes = require('./routes/hr');
+const hrRoutes = require('./routes/hr'); 
 
 const app = express();
 const PORT = process.env.PORT || 4000;  

@@ -36,7 +36,7 @@ router.get('/dashboard', requireHR, async (req, res) => {
   if (date_to)   { params.push(date_to);            where += ` AND date <= $${params.length}`; }
   if (emp_email) { params.push(`%${emp_email}%`);   where += ` AND emp_email ILIKE $${params.length}`; }
 
-  try {
+  try { 
     const records = await pool.query(
       `SELECT *,
          CASE WHEN punch_in_time IS NOT NULL AND punch_out_time IS NOT NULL
