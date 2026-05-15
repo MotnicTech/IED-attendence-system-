@@ -112,15 +112,18 @@
     <div class="toast" id="toast"></div>
   </div>
 
+    <script type="application/json" id="initialSessionUser"><%- JSON.stringify(typeof initialUser !== 'undefined' ? initialUser : null) %></script>
   <script>
     // ─── STATE ────────────────────────────────────────────────────────────────
-    const initialSessionUser = <%- JSON.stringify(typeof initialUser !== 'undefined' ? initialUser : null) %>;
+      const initialSessionUser = JSON.parse(document.getElementById('initialSessionUser').textContent || 'null');
     let userEmail = '';
     let currentUser = null;
     let userLat = null;
     let userLng = null;
     let locationName = '';
     let sessionLog = JSON.parse(sessionStorage.getItem('attendanceLog') || '{}');
+    let attendanceState = { canPunchIn: false, canPunchOut: false, inTimeLabel: null, outTimeLabel: null };
+    let locationReady = false;
 
     // ─── INIT ─────────────────────────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', async () => {
@@ -135,6 +138,7 @@
           currentUser = initialSessionUser;
           setUser(initialSessionUser);
           showAuthenticatedUI();
+          await refreshAttendanceState();
           startLocation();
           return;
         }
@@ -146,6 +150,7 @@
           currentUser = data.user;
           setUser(data.user);
           showAuthenticatedUI();
+          await refreshAttendanceState();
           startLocation();
           return;
         }
@@ -180,19 +185,48 @@
       document.getElementById('headerEmail').textContent = user.name || user.email;
       const initialSource = user.name || user.email || '?';
       document.getElementById('avatarInitial').textContent = initialSource[0].toUpperCase();
+    }
 
-      // Restore today's session log
-      const today = new Date().toDateString();
-      if (sessionLog[userEmail] && sessionLog[userEmail].date === today) {
-        const log = sessionLog[userEmail];
-        if (log.inTime) {
-          document.getElementById('inTime').textContent = log.inTime;
+    async function refreshAttendanceState() {
+      if (!userEmail) return;
+      try {
+        const response = await fetch('/api/attendance/today', { credentials: 'same-origin' });
+        const data = await response.json();
+
+        if (!response.ok || !data.authenticated) {
+          throw new Error(data.message || 'Unable to load attendance state');
+        }
+
+        attendanceState = {
+          canPunchIn: !!data.canPunchIn,
+          canPunchOut: !!data.canPunchOut,
+          inTimeLabel: data.inTimeLabel || null,
+          outTimeLabel: data.outTimeLabel || null
+        };
+
+        if (!sessionLog[userEmail]) {
+          sessionLog[userEmail] = { date: new Date().toDateString(), inTime: null, outTime: null };
+        }
+
+        sessionLog[userEmail].date = new Date().toDateString();
+        sessionLog[userEmail].inTime = data.inTimeLabel || null;
+        sessionLog[userEmail].outTime = data.outTimeLabel || null;
+        sessionStorage.setItem('attendanceLog', JSON.stringify(sessionLog));
+
+        if (data.record) {
           document.getElementById('todayRecord').style.display = 'block';
+          if (data.inTimeLabel) {
+            document.getElementById('inTime').textContent = data.inTimeLabel;
+          }
+          if (data.outTimeLabel) {
+            document.getElementById('outTime').textContent = data.outTimeLabel;
+          }
         }
-        if (log.outTime) {
-          document.getElementById('outTime').textContent = log.outTime;
-        }
-        updateButtonState(log.inTime, log.outTime);
+
+        syncButtonState();
+      } catch (error) {
+        attendanceState = { canPunchIn: false, canPunchOut: false, inTimeLabel: null, outTimeLabel: null };
+        syncButtonState();
       }
     }
 
@@ -215,14 +249,16 @@
       document.getElementById('coordsDisplay').textContent = `${userLat}, ${userLng}`;
       setStatus('Location found ✓', 'success');
       reverseGeocode(userLat, userLng);
-      enableButtons();
+      locationReady = true;
+      syncButtonState();
     }
 
     function onLocationError(err) {
       setStatus('Location access denied — please allow location', 'error');
       locationName = 'Unknown';
       document.getElementById('locationName').textContent = 'Location not available';
-      enableButtons(); // still allow punch with unknown location
+      locationReady = true;
+      syncButtonState(); // still allow punch with unknown location
     }
 
     function reverseGeocode(lat, lng) {
@@ -250,20 +286,14 @@
     }
 
     // ─── BUTTONS ──────────────────────────────────────────────────────────────
-    function enableButtons() {
-      if (!userEmail) return;
-      const today = new Date().toDateString();
-      const log = sessionLog[userEmail];
-      updateButtonState(log?.date === today ? log.inTime : null, log?.date === today ? log.outTime : null);
-    }
-
-    function updateButtonState(inTime, outTime) {
+    function syncButtonState() {
       const btnIn = document.getElementById('btnIn');
       const btnOut = document.getElementById('btnOut');
-      btnIn.disabled = !!inTime;   // disable IN if already punched in
-      btnOut.disabled = !inTime || !!outTime; // OUT only after IN, and only once
-      if (inTime) btnIn.classList.add('done');
-      if (outTime) btnOut.classList.add('done');
+      const allowInteraction = locationReady || (!attendanceState.canPunchIn && !attendanceState.canPunchOut);
+      btnIn.disabled = !allowInteraction || !attendanceState.canPunchIn;
+      btnOut.disabled = !allowInteraction || !attendanceState.canPunchOut;
+      btnIn.classList.toggle('done', !!attendanceState.inTimeLabel);
+      btnOut.classList.toggle('done', !!attendanceState.outTimeLabel);
     }
 
     // ─── PUNCH ────────────────────────────────────────────────────────────────
@@ -301,26 +331,27 @@
         const data = await res.json();
 
         if (data.success) {
-          // Update session log
-          const today = now.toDateString();
-          if (!sessionLog[userEmail] || sessionLog[userEmail].date !== today) {
-            sessionLog[userEmail] = { date: today, inTime: null, outTime: null };
-          }
-
           if (status === 'Punch In') {
-            sessionLog[userEmail].inTime = timeStr;
             document.getElementById('inTime').textContent = timeStr;
             btn.innerHTML = '<span class="btn-icon">✅</span> IN Recorded';
-            btn.classList.add('done');
-            document.getElementById('btnOut').disabled = false;
+            attendanceState.canPunchIn = false;
+            attendanceState.canPunchOut = true;
+            attendanceState.inTimeLabel = timeStr;
+            sessionLog[userEmail] = sessionLog[userEmail] || { date: now.toDateString(), inTime: null, outTime: null };
+            sessionLog[userEmail].date = now.toDateString();
+            sessionLog[userEmail].inTime = timeStr;
+            document.getElementById('todayRecord').style.display = 'block';
           } else {
-            sessionLog[userEmail].outTime = timeStr;
             document.getElementById('outTime').textContent = timeStr;
             btn.innerHTML = '<span class="btn-icon">✅</span> OUT Recorded';
-            btn.classList.add('done');
+            attendanceState.canPunchOut = false;
+            attendanceState.outTimeLabel = timeStr;
+            sessionLog[userEmail] = sessionLog[userEmail] || { date: now.toDateString(), inTime: null, outTime: null };
+            sessionLog[userEmail].date = now.toDateString();
+            sessionLog[userEmail].outTime = timeStr;
           }
 
-          document.getElementById('todayRecord').style.display = 'block';
+          syncButtonState();
           sessionStorage.setItem('attendanceLog', JSON.stringify(sessionLog));
           showToast(`✅ ${status} at ${timeStr} — ${locationName}`);
         } else {

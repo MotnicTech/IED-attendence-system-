@@ -49,11 +49,17 @@ app.get('/logout', (req, res) => {
 });
 
 initDB().then(() => {
+  if (typeof attendanceRoutes.scheduleAutoPunchOut === 'function') {
+    attendanceRoutes.scheduleAutoPunchOut();
+  }
   app.listen(PORT, () => {
     console.log(`✅ IED Attendance App → http://localhost:${PORT}`);
     console.log(`👤 HR Panel         → http://localhost:${PORT}/hr/login`);
   });
 }).catch(err => {
+  if (typeof attendanceRoutes.scheduleAutoPunchOut === 'function') {
+    attendanceRoutes.scheduleAutoPunchOut();
+  }
   console.error('DB connect failed:', err.message);
   app.listen(PORT, () => console.log(`✅ Running at http://localhost:${PORT} (no DB)`));
 });
