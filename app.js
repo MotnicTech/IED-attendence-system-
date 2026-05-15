@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
+const { passport, buildAuthRouter } = require('./routes/auth');
 const { initDB } = require('./db');
 
 const attendanceRoutes = require('./routes/attendance');
@@ -24,8 +25,28 @@ app.use(session({
   cookie: { secure: false, maxAge: 8 * 60 * 60 * 1000 }
 }));
 
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use('/auth', buildAuthRouter());
+
+app.get('/api/session', (req, res) => {
+  res.json({
+    authenticated: !!(req.user || req.session.user),
+    user: req.user || req.session.user || null
+  });
+});
+
 app.use('/', attendanceRoutes);
 app.use('/hr', hrRoutes);
+
+app.get('/logout', (req, res) => {
+  req.logout(() => {
+    req.session.destroy(() => {
+      res.redirect('/');
+    });
+  });
+});
 
 initDB().then(() => {
   app.listen(PORT, () => {

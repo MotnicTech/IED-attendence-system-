@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/css/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
-<body>
+<body class="<%= (typeof initialUser !== 'undefined' && initialUser) ? '' : 'auth-only' %>">
 
   <div class="wrapper">
     <!-- Header -->
@@ -16,12 +16,24 @@
         <img src="/images/IED_LOGO.jpg" alt="IED" class="site-logo" onerror="this.style.display='none'" />
         <span class="logo-text">IED Attendance</span>
       </div>
-      <div class="header-email" id="headerEmail">Detecting account...</div>
+      <div class="header-actions">
+        <div class="header-email" id="headerEmail">Sign in with Google</div>
+        <a href="/auth/google" class="auth-btn auth-btn-primary" id="authBtn">Google Sign-In</a>
+        <a href="/logout" class="auth-btn auth-btn-ghost" id="logoutBtn" style="display:none">Logout</a>
+      </div>
     </header>
 
     <!-- Main Card -->
     <main>
       <div class="card" id="mainCard">
+
+        <div class="auth-panel" id="authPrompt">
+          <div>
+            <div class="auth-title">Sign in with Google to continue</div>
+            <div class="auth-sub">Manual email entry has been removed. Punch IN and Punch OUT will use your Google account automatically.</div>
+          </div>
+          <a href="/auth/google" class="auth-btn auth-btn-primary">Continue with Google</a>
+        </div>
 
         <!-- Status Banner -->
         <div class="status-banner" id="statusBanner">
@@ -102,83 +114,77 @@
 
   <script>
     // ─── STATE ────────────────────────────────────────────────────────────────
+    const initialSessionUser = <%- JSON.stringify(typeof initialUser !== 'undefined' ? initialUser : null) %>;
     let userEmail = '';
+    let currentUser = null;
     let userLat = null;
     let userLng = null;
     let locationName = '';
     let sessionLog = JSON.parse(sessionStorage.getItem('attendanceLog') || '{}');
 
     // ─── INIT ─────────────────────────────────────────────────────────────────
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       updateClock();
       setInterval(updateClock, 1000);
-      detectEmail();
+      await loadSession();
     });
 
-    // ─── EMAIL DETECTION ─────────────────────────────────────────────────────
-    function detectEmail() {
-      // Try to get from logged-in Google account via accounts.google.com hint
-      // Since we can't directly access browser accounts, we use a prompt as fallback
-      // But first, check sessionStorage cache
-      const cached = sessionStorage.getItem('userEmail');
-      if (cached) {
-        setEmail(cached);
-        startLocation();
-        return;
+    async function loadSession() {
+      try {
+        if (initialSessionUser && initialSessionUser.email) {
+          currentUser = initialSessionUser;
+          setUser(initialSessionUser);
+          showAuthenticatedUI();
+          startLocation();
+          return;
+        }
+
+        const response = await fetch('/api/session', { credentials: 'same-origin' });
+        const data = await response.json();
+
+        if (data.authenticated && data.user && data.user.email) {
+          currentUser = data.user;
+          setUser(data.user);
+          showAuthenticatedUI();
+          startLocation();
+          return;
+        }
+
+        showUnauthenticatedUI();
+      } catch (error) {
+        showUnauthenticatedUI();
       }
-
-      // Try Google One Tap / FedCM silent login hint
-      // Fallback: ask user their email (no password, just email identifier)
-      showEmailModal();
     }
 
-    function showEmailModal() {
-      const modal = document.createElement('div');
-      modal.className = 'email-modal';
-      modal.innerHTML = `
-        <div class="modal-box">
-            <div class="modal-logo">
-              <img src="/images/ied-logo.png" alt="IED" class="modal-logo-img" onerror="this.style.display='none'" />
-            </div>
-          <h2>Enter Your Email</h2>
-          <p>Your registered Gmail ID (same as your Google account on this device)</p>
-          <input type="email" id="emailInput" placeholder="yourname@gmail.com" autocomplete="email" />
-          <button onclick="confirmEmail()">Continue →</button>
-          <div class="modal-note">⚠️ Use the same Gmail that is registered in attendance records.</div>
-        </div>
-      `;
-      document.body.appendChild(modal);
-      setTimeout(() => document.getElementById('emailInput').focus(), 100);
-      document.getElementById('emailInput').addEventListener('keydown', e => {
-        if (e.key === 'Enter') confirmEmail();
-      });
+    function showAuthenticatedUI() {
+      document.body.classList.remove('auth-only');
+      document.getElementById('authPrompt').style.display = 'none';
+      document.getElementById('authBtn').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'inline-flex';
+      document.getElementById('headerEmail').textContent = currentUser.name || currentUser.email;
     }
 
-    function confirmEmail() {
-      const input = document.getElementById('emailInput');
-      const email = input.value.trim().toLowerCase();
-      if (!email.includes('@') || !email.includes('.')) {
-        input.style.borderColor = '#e53e3e';
-        input.placeholder = 'Valid email required!';
-        return;
-      }
-      sessionStorage.setItem('userEmail', email);
-      document.querySelector('.email-modal').remove();
-      setEmail(email);
-      startLocation();
+    function showUnauthenticatedUI() {
+      document.body.classList.add('auth-only');
+      document.getElementById('authPrompt').style.display = 'flex';
+      document.getElementById('authBtn').style.display = 'inline-flex';
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('headerEmail').textContent = 'Sign in with Google';
+      setStatus('Sign in with Google to mark attendance', 'loading');
+      updateButtonState(null, null);
     }
 
-    function setEmail(email) {
-      userEmail = email;
-      document.getElementById('empEmail').textContent = email;
-      document.getElementById('headerEmail').textContent = email;
-      const initial = email[0].toUpperCase();
-      document.getElementById('avatarInitial').textContent = initial;
+    function setUser(user) {
+      userEmail = user.email.toLowerCase();
+      document.getElementById('empEmail').textContent = user.name ? `${user.name} (${user.email})` : user.email;
+      document.getElementById('headerEmail').textContent = user.name || user.email;
+      const initialSource = user.name || user.email || '?';
+      document.getElementById('avatarInitial').textContent = initialSource[0].toUpperCase();
 
       // Restore today's session log
       const today = new Date().toDateString();
-      if (sessionLog[email] && sessionLog[email].date === today) {
-        const log = sessionLog[email];
+      if (sessionLog[userEmail] && sessionLog[userEmail].date === today) {
+        const log = sessionLog[userEmail];
         if (log.inTime) {
           document.getElementById('inTime').textContent = log.inTime;
           document.getElementById('todayRecord').style.display = 'block';
@@ -262,7 +268,7 @@
 
     // ─── PUNCH ────────────────────────────────────────────────────────────────
     async function punch(status) {
-      if (!userEmail) return showMsg('Email not detected', 'error');
+      if (!currentUser || !userEmail) return showMsg('Please sign in with Google first', 'error');
       if (!userLat) {
         showMsg('Location not yet available. Please wait...', 'error');
         startLocation();
@@ -284,7 +290,6 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            email: userEmail,
             status,
             latitude: userLat,
             longitude: userLng,

@@ -39,7 +39,7 @@ function appendToExcel(rowData) {
   XLSX.writeFile(wb, EXCEL_PATH);
 }
 
-async function saveToDB(rowData) {
+async function saveToDB(employeeEmail, rowData) {
   try {
     const now = new Date(rowData.timestamp);
     const dateOnly = now.toISOString().split('T')[0];
@@ -62,7 +62,7 @@ async function saveToDB(rowData) {
       `WITH target AS (
          SELECT id
          FROM attendance_logs
-         WHERE emp_email = $1
+        WHERE emp_email = $1
            AND date = $17
            AND (
              ($20 AND punch_in_time IS NULL)
@@ -94,7 +94,7 @@ async function saveToDB(rowData) {
        WHERE a.id = target.id
        RETURNING a.id`,
       [
-        rowData.email,
+        employeeEmail,
         rowData.status,
         parseFloat(rowData.latitude),
         parseFloat(rowData.longitude),
@@ -126,7 +126,7 @@ async function saveToDB(rowData) {
           in_map_link, out_map_link, date, month_year, map_link)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
         [
-          rowData.email,
+          employeeEmail,
           rowData.status,
           parseFloat(rowData.latitude),
           parseFloat(rowData.longitude),
@@ -153,16 +153,23 @@ async function saveToDB(rowData) {
   }
 }
 
-router.get('/', (req, res) => res.render('index'));
+router.get('/', (req, res) => res.render('index', {
+  initialUser: req.user || req.session.user || null
+}));
 
 router.post('/punch', async (req, res) => {
   try {
-    const { email, status, latitude, longitude, locationName, timestamp } = req.body;
-    if (!email || !status || !latitude || !longitude) {
+    const authUser = req.user || req.session.user;
+    const employeeEmail = authUser && authUser.email ? authUser.email.toLowerCase() : '';
+    const { status, latitude, longitude, locationName, timestamp } = req.body;
+    if (!employeeEmail) {
+      return res.status(401).json({ success: false, message: 'Please sign in with Google first.' });
+    }
+    if (!status || !latitude || !longitude) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
-    appendToExcel({ email, status, latitude, longitude, locationName, timestamp });
-    await saveToDB({ email, status, latitude, longitude, locationName, timestamp });
+    appendToExcel({ email: employeeEmail, status, latitude, longitude, locationName, timestamp });
+    await saveToDB(employeeEmail, { email: employeeEmail, status, latitude, longitude, locationName, timestamp });
     res.json({ success: true, message: `${status} recorded!` });
   } catch (err) {
     console.error(err);
