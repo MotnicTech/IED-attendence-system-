@@ -176,7 +176,7 @@
       document.getElementById('logoutBtn').style.display = 'none';
       document.getElementById('headerEmail').textContent = 'Sign in with Google';
       setStatus('Sign in with Google to mark attendance', 'loading');
-      updateButtonState(null, null);
+      syncButtonState();
     }
 
     function setUser(user) {
