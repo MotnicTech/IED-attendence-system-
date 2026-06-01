@@ -15,6 +15,9 @@ const hrRouter                 = require('./routes/hr');       // routes/hr.js
 const app  = express();     
 const PORT = process.env.PORT || 4000;  
 
+// Trust proxy headers (X-Forwarded-Proto) in production behind Render/reverse proxy
+app.set('trust proxy', 1);
+
 // ── VIEW ENGINE ───────────────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
