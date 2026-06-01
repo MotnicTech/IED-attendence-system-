@@ -249,6 +249,138 @@
     </div>
   </div>
   <% } %>
+
+  <!-- ═══════════════════════════════════════════════════════
+       DAILY ATTENDANCE REGISTER (All active employees mapped daily)
+       ═══════════════════════════════════════════════════════ -->
+  <% if(typeof dailyGrid !== 'undefined' && dailyGrid && dailyGrid.length > 0){ %>
+  <div class="section-label" style="margin-top: 24px;">Daily Attendance Register
+    <% if(typeof reportRange !== 'undefined' && reportRange){ %>
+      — <%= reportRange.startKey %> to <%= reportRange.endKey %>
+    <% } %>
+  </div>
+  <div class="tcard">
+    <div class="tbar">
+      <div class="tbar-left">
+        <div class="ttitle">Daily Attendance Status</div>
+        <div class="tsub">All active employees mapped day-by-day</div>
+      </div>
+    </div>
+    <div class="tscroll">
+      <table class="detail">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Employee</th>
+            <th>Emp ID</th>
+            <th class="gi">Punch IN</th>
+            <th class="gi">In Location</th>
+            <th class="gi">In Map</th>
+            <th class="go">Punch OUT</th>
+            <th class="go">Out Location</th>
+            <th class="go">Out Map</th>
+            <th>Hours</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% dailyGrid.forEach((row, i) => {
+            const hrs = row.hours_worked;
+            const inT = row.punch_in_time;
+            const outT = row.punch_out_time;
+            
+            let badgeClass = 'b-none';
+            let statusText = row.status;
+
+            if (row.status === 'Absent') {
+              badgeClass = 'b-short'; // light red style
+            } else if (row.status === 'Weekly Off') {
+              badgeClass = 'b-none';  // gray style
+            } else if (row.status === 'Punch In') {
+              badgeClass = 'b-pending'; // light indigo style
+              statusText = 'Pending OUT';
+            } else if (row.status === 'Punch Out' || row.status === 'Auto Punch Out') {
+              badgeClass = 'b-full'; // light green style
+              statusText = hrs >= 8 ? 'Full Day' : hrs >= 4 ? 'Half Day' : 'Short Day';
+            }
+          %>
+          <tr <%- row.status === 'Absent' ? 'style="background: #fff5f5;"' : row.status === 'Weekly Off' ? 'style="background: #fdfdfd; color: #a19d96;"' : '' %>>
+            <td style="color:var(--muted)"><%= i+1 %></td>
+            <td style="white-space:nowrap;font-weight:600;"><%= formatDateDMY(row.date) %></td>
+            <td>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div <%- `style="width:28px;height:28px;border-radius:6px;background:${row.status === 'Absent' ? '#fca5a5' : row.status === 'Weekly Off' ? '#d1d5db' : '#3730a3'};display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:12px;flex-shrink:0;"` %>>
+                  <%= (row.emp_name||'?')[0].toUpperCase() %>
+                </div>
+                <div>
+                  <div class="emp-name" style="font-size:12.5px;"><%= row.emp_name %></div>
+                  <div class="emp-email" style="font-size:10.5px;"><%= row.email %></div>
+                </div>
+              </div>
+            </td>
+            <td><span class="emp-id" style="font-size:11px;padding:2px 6px;"><%= row.emp_id %></span></td>
+            
+            <!-- Punch In -->
+            <td>
+              <% if(inT){ %>
+                <span class="tval tv-in" style="font-size:12px;">🟢 <%= formatTimeHHMM(inT) %></span>
+              <% } else { %>
+                <span style="color:var(--muted)">—</span>
+              <% } %>
+            </td>
+            <td>
+              <span class="loc" title="<%= row.in_location||'' %>">
+                <%= row.in_location ? (row.in_location.length > 20 ? row.in_location.substring(0, 18) + '…' : row.in_location) : '—' %>
+              </span>
+            </td>
+            <td>
+              <% if(row.in_map_link){ %>
+                <a href="<%= row.in_map_link %>" target="_blank" class="map-a">📍 Map</a>
+              <% } else { %>
+                —
+              <% } %>
+            </td>
+
+            <!-- Punch Out -->
+            <td>
+              <% if(outT){ %>
+                <span class="tval tv-out" style="font-size:12px;">🔵 <%= formatTimeHHMM(outT) %></span>
+              <% } else { %>
+                <span style="color:var(--muted)">—</span>
+              <% } %>
+            </td>
+            <td>
+              <span class="loc" title="<%= row.out_location||'' %>">
+                <%= row.out_location ? (row.out_location.length > 20 ? row.out_location.substring(0, 18) + '…' : row.out_location) : '—' %>
+              </span>
+            </td>
+            <td>
+              <% if(row.out_map_link){ %>
+                <a href="<%= row.out_map_link %>" target="_blank" class="map-a">📍 Map</a>
+              <% } else { %>
+                —
+              <% } %>
+            </td>
+
+            <!-- Hours Worked -->
+            <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:12.5px;color:var(--navy)">
+              <%= hrs !== null ? hrs.toFixed(2) + ' h' : '—' %>
+            </td>
+            
+            <!-- Status Badge -->
+            <td>
+              <span class="badge <%= badgeClass %>" style="font-size:10.5px;padding:2px 8px;white-space:nowrap;">
+                <%= statusText %>
+              </span>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <% } %>
 </main>
 
 <script>

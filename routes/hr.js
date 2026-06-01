@@ -330,6 +330,69 @@ router.get('/dashboard', requireHR, async (req, res) => {
 
     const employeeSummary = buildEmployeeSummary(records.rows, employees.rows, reportRange.totalDays);
 
+    // Generate all-employee daily attendance grid (who punched and who was absent)
+    const dailyGrid = [];
+    const start = parseDateKey(reportRange.startKey);
+    const end = parseDateKey(reportRange.endKey);
+
+    if (start && end && start <= end) {
+      const cursor = new Date(end);
+      cursor.setHours(0, 0, 0, 0);
+      const startNormalized = new Date(start);
+      startNormalized.setHours(0, 0, 0, 0);
+
+      while (cursor >= startNormalized) {
+        const dateStr = formatDateKey(cursor);
+        const dayOfWeek = cursor.getDay(); // 0 = Sunday
+        const isSunday = dayOfWeek === 0;
+
+        for (const emp of employees.rows) {
+          // Find log matching employee and date
+          const log = records.rows.find(r => {
+            const matchId = r.emp_id && emp.emp_id && r.emp_id === emp.emp_id;
+            const matchEmail = r.emp_email && emp.email && r.emp_email.toLowerCase() === emp.email.toLowerCase();
+            const logDateStr = r.date ? formatDateKey(parseDateKey(r.date)) : null;
+            return (matchId || matchEmail) && logDateStr === dateStr;
+          });
+
+          if (log) {
+            dailyGrid.push({
+              date: dateStr,
+              emp_id: emp.emp_id,
+              emp_name: emp.name,
+              email: emp.email,
+              punch_in_time: log.punch_in_time,
+              punch_out_time: log.punch_out_time,
+              in_location: log.in_location,
+              out_location: log.out_location,
+              in_map_link: log.in_map_link,
+              out_map_link: log.out_map_link,
+              hours_worked: log.hours_worked ? parseFloat(log.hours_worked) : null,
+              status: log.status,
+              is_sunday: isSunday
+            });
+          } else {
+            dailyGrid.push({
+              date: dateStr,
+              emp_id: emp.emp_id,
+              emp_name: emp.name,
+              email: emp.email,
+              punch_in_time: null,
+              punch_out_time: null,
+              in_location: null,
+              out_location: null,
+              in_map_link: null,
+              out_map_link: null,
+              hours_worked: null,
+              status: isSunday ? 'Weekly Off' : 'Absent',
+              is_sunday: isSunday
+            });
+          }
+        }
+        cursor.setDate(cursor.getDate() - 1);
+      }
+    }
+
     const summary = await pool.query(
       `SELECT
          COUNT(*)                                                                            AS total_records,
@@ -352,6 +415,7 @@ router.get('/dashboard', requireHR, async (req, res) => {
       hr:      req.session.hr,
       records: records.rows,
       employeeSummary,
+      dailyGrid,
       reportRange,
       summary: summary.rows[0],
       filters: { date_from: date_from||'', date_to: date_to||'', emp_email: emp_email||'', emp_id: emp_id||'' },
@@ -363,6 +427,7 @@ router.get('/dashboard', requireHR, async (req, res) => {
     res.render('hr-dashboard', {
       hr: req.session.hr, records: [],
       employeeSummary: [],
+      dailyGrid: [],
       reportRange,
       filters: { date_from:'', date_to:'', emp_email:'', emp_id:'' },
       summary: { total_records:0, complete:0, pending_out:0, unique_employees:0 },
