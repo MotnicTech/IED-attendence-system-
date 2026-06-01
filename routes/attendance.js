@@ -1,349 +1,310 @@
-const express = require('express');
-const router = express.Router();
-const XLSX = require('xlsx');
-const path = require('path');
-const fs = require('fs');
-const cron = require('node-cron');
-const { pool } = require('../db');
- 
-const EXCEL_PATH = path.join(__dirname, '../data/attendance.xlsx');
-const TIME_ZONE = process.env.APP_TIMEZONE || 'Asia/Kolkata';
+// routes/attendance.js
+// Handles the legacy attendance page helpers used by the portal
+// AND the new /emp/* PIN-based employee system.
+// Both share the same attendance_logs table.
 
+const express  = require('express');
+const router   = express.Router();
+const XLSX     = require('xlsx');
+const path     = require('path');
+const fs       = require('fs');
+const cron     = require('node-cron');
+const { pool } = require('../db');
+
+const EXCEL_PATH = path.join(__dirname, '../data/attendance.xlsx');
+const TIME_ZONE  = process.env.APP_TIMEZONE || 'Asia/Kolkata';
+
+// ─── TIME HELPERS ──────────────────────────────────────────────────────────────
 function getZonedParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
     hour12: false
   }).formatToParts(date);
-
-  return parts.reduce((acc, part) => {
-    if (part.type !== 'literal') acc[part.type] = part.value;
-    return acc;
-  }, {});
+  return parts.reduce((acc, p) => { if (p.type !== 'literal') acc[p.type] = p.value; return acc; }, {});
 }
 
 function getLocalDateKey(date = new Date()) {
-  const zoned = getZonedParts(date);
-  return `${zoned.year}-${zoned.month}-${zoned.day}`;
+  const z = getZonedParts(date);
+  return `${z.year}-${z.month}-${z.day}`;
 }
 
 function getMonthYearKey(date = new Date()) {
-  const zoned = getZonedParts(date);
-  return `${zoned.month}/${String(zoned.year).slice(2)}`;
+  const z = getZonedParts(date);
+  return `${z.month}/${String(z.year).slice(2)}`;
 }
 
 function getIstTimestampString(date = new Date()) {
-  const zoned = getZonedParts(date);
+  const z  = getZonedParts(date);
   const ms = String(date.getMilliseconds()).padStart(3, '0');
-  return `${zoned.year}-${zoned.month}-${zoned.day} ${zoned.hour}:${zoned.minute}:${zoned.second}.${ms}`;
+  return `${z.year}-${z.month}-${z.day} ${z.hour}:${z.minute}:${z.second}.${ms}`;
 }
 
-function getIstTimeLabel(value) {
+function formatTimeHHMM(value) {
   if (!value) return null;
-  const text = String(value);
-  const timePart = text.includes('T') ? text.split('T')[1] : text.split(' ')[1] || text;
-  return timePart.slice(0, 8);
+  const text     = String(value);
+  const timePart = text.includes('T') ? text.split('T')[1] : (text.split(' ')[1] || text);
+  return timePart.slice(0, 5);
 }
 
 function toNumberOrNull(value) {
   if (value === undefined || value === null || value === '') return null;
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  const p = parseFloat(value);
+  return isFinite(p) ? p : null;
 }
 
-function buildMapLink(latitude, longitude) {
-  const lat = toNumberOrNull(latitude);
-  const lng = toNumberOrNull(longitude);
-  if (lat === null || lng === null) return null;
-  return `https://www.google.com/maps?q=${lat},${lng}`;
+function buildMapLink(lat, lng) {
+  const la = toNumberOrNull(lat), lo = toNumberOrNull(lng);
+  if (la === null || lo === null) return null;
+  return `https://www.google.com/maps?q=${la},${lo}`;
 }
 
-function formatTimeLabel(dateValue) {
-  if (!dateValue) return null;
-  return getIstTimeLabel(dateValue);
-}
-
-async function getTodayAttendanceState(employeeEmail) {
-  const today = getLocalDateKey();
-  const result = await pool.query(
-    `SELECT id, emp_email, status, punch_in_time, punch_out_time, location_name, latitude, longitude, date, month_year, map_link,
-            in_location, out_location, in_map_link, out_map_link
-       FROM attendance_logs
-      WHERE emp_email = $1
-        AND date = $2
-      ORDER BY created_at DESC, id DESC
-      LIMIT 1`,
-    [employeeEmail, today]
-  );
-
-  const record = result.rows[0] || null;
-  return {
-    date: today,
-    record,
-    canPunchIn: !record || (!record.punch_in_time && !record.punch_out_time),
-    canPunchOut: !!record && !!record.punch_in_time && !record.punch_out_time,
-    inTimeLabel: formatTimeLabel(record && record.punch_in_time),
-    outTimeLabel: formatTimeLabel(record && record.punch_out_time)
-  };
+// ─── EXCEL HELPERS ─────────────────────────────────────────────────────────────
+function ensureDataDir() {
+  const dir = path.join(__dirname, '../data');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
 function getWorkbook() {
+  ensureDataDir();
   if (fs.existsSync(EXCEL_PATH)) return XLSX.readFile(EXCEL_PATH);
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['name', 'status', 'latitude', 'longitude', 'date', 'location', 'Month', 'Location in Map']
+    ['Emp ID', 'Name', 'Email', 'Status', 'Latitude', 'Longitude', 'Date', 'Location', 'Month', 'Map Link']
   ]);
-  XLSX.utils.book_append_sheet(wb, ws, '10020012');
+  XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
   XLSX.writeFile(wb, EXCEL_PATH);
   return wb;
 }
 
 function appendToExcel(rowData) {
-  const wb = getWorkbook();
-  const sheetName = wb.SheetNames.includes('10020012') ? '10020012' : wb.SheetNames[0];
-  const ws = wb.Sheets[sheetName];
-  const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-  const monthStr = rowData.monthYear || getMonthYearKey(new Date());
-  const latitude = toNumberOrNull(rowData.latitude);
-  const longitude = toNumberOrNull(rowData.longitude);
-  data.push([
-    rowData.email,
-    rowData.status,
-    latitude === null ? '' : latitude,
-    longitude === null ? '' : longitude,
-    rowData.timestamp,
-    rowData.locationName || 'Unknown',
-    monthStr,
-    buildMapLink(rowData.latitude, rowData.longitude) || ''
-  ]);
-  wb.Sheets[sheetName] = XLSX.utils.aoa_to_sheet(data);
-  XLSX.writeFile(wb, EXCEL_PATH);
+  try {
+    const wb        = getWorkbook();
+    const sheetName = wb.SheetNames[0];
+    const ws        = wb.Sheets[sheetName];
+    const data      = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const lat       = toNumberOrNull(rowData.latitude);
+    const lng       = toNumberOrNull(rowData.longitude);
+    data.push([
+      rowData.emp_id      || '',
+      rowData.name        || '',
+      rowData.email,
+      rowData.status,
+      lat  !== null ? lat  : '',
+      lng  !== null ? lng  : '',
+      rowData.timestamp,
+      rowData.locationName || 'Unknown',
+      rowData.monthYear   || getMonthYearKey(),
+      buildMapLink(lat, lng) || ''
+    ]);
+    wb.Sheets[sheetName] = XLSX.utils.aoa_to_sheet(data);
+    XLSX.writeFile(wb, EXCEL_PATH);
+  } catch (e) {
+    console.error('Excel write error (non-fatal):', e.message);
+  }
 }
 
-async function saveToDB(employeeEmail, rowData) {
-  const now = new Date();
-  const timestampString = getIstTimestampString(now);
-  const dateOnly = getLocalDateKey(now);
-  const monthYear = getMonthYearKey(now);
-  const statusText = String(rowData.status || '').trim().toLowerCase();
-  const isPunchIn = statusText === 'punch in';
-  const isPunchOut = statusText === 'punch out';
-  const latitude = toNumberOrNull(rowData.latitude);
-  const longitude = toNumberOrNull(rowData.longitude);
-  const locationLabel = rowData.locationName || 'Unknown';
-  const mapLink = buildMapLink(rowData.latitude, rowData.longitude);
+// ─── DB ATTENDANCE STATE ────────────────────────────────────────────────────────
+async function getTodayAttendanceState(empId, empEmail) {
+  const today = getLocalDateKey();
 
-  if (!isPunchIn && !isPunchOut) {
-    throw new Error('Invalid punch status');
+  // Try by emp_id first, fall back to email (legacy rows)
+  let result;
+  if (empId) {
+    result = await pool.query(
+      `SELECT * FROM attendance_logs
+        WHERE emp_id=$1 AND date=$2
+        ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [empId, today]
+    );
+  }
+  if (!result || !result.rows.length) {
+    result = await pool.query(
+      `SELECT * FROM attendance_logs
+        WHERE emp_email=$1 AND date=$2
+        ORDER BY created_at DESC, id DESC LIMIT 1`,
+      [empEmail, today]
+    );
   }
 
-  const existingResult = await pool.query(
+  const record = result.rows[0] || null;
+  return {
+    date:         today,
+    record,
+    canPunchIn:   !record || (!record.punch_in_time && !record.punch_out_time),
+    canPunchOut:  !!record && !!record.punch_in_time && !record.punch_out_time,
+    inTimeLabel:  formatTimeHHMM(record && record.punch_in_time),
+    outTimeLabel: formatTimeHHMM(record && record.punch_out_time)
+  };
+}
+
+// ─── CORE PUNCH SAVE ───────────────────────────────────────────────────────────
+async function savePunch(empId, empEmail, empName, status, latitude, longitude, locationName) {
+  const now        = new Date();
+  const timestamp  = getIstTimestampString(now);
+  const dateOnly   = getLocalDateKey(now);
+  const monthYear  = getMonthYearKey(now);
+  const isPunchIn  = status === 'Punch In';
+  const isPunchOut = status === 'Punch Out';
+  const lat        = toNumberOrNull(latitude);
+  const lng        = toNumberOrNull(longitude);
+  const locLabel   = (locationName || '').trim() || 'Unknown';
+  const mapLink    = buildMapLink(lat, lng);
+
+  if (!isPunchIn && !isPunchOut) throw new Error('Invalid punch status.');
+
+  // Look for today's record
+  const existing = await pool.query(
     `SELECT id, punch_in_time, punch_out_time
        FROM attendance_logs
-      WHERE emp_email = $1
-        AND date = $2
-      ORDER BY created_at DESC, id DESC
-      LIMIT 1`,
-    [employeeEmail, dateOnly]
+      WHERE (emp_id=$1 OR emp_email=$2) AND date=$3
+      ORDER BY created_at DESC, id DESC LIMIT 1`,
+    [empId || '', empEmail, dateOnly]
   );
-
-  const existing = existingResult.rows[0] || null;
+  const rec = existing.rows[0] || null;
 
   if (isPunchIn) {
-    if (existing && existing.punch_in_time && !existing.punch_out_time) {
-      throw new Error('IN already recorded for today. Please punch OUT first.');
-    }
-    if (existing && existing.punch_in_time && existing.punch_out_time) {
+    if (rec && rec.punch_in_time && !rec.punch_out_time)
+      throw new Error('Already punched IN today. Please punch OUT first.');
+    if (rec && rec.punch_in_time && rec.punch_out_time)
       throw new Error('Attendance already completed for today.');
-    }
 
     await pool.query(
       `INSERT INTO attendance_logs
-       (emp_email, status, latitude, longitude, location_name, punch_time, punch_in_time, punch_out_time,
-        in_location, out_location, in_latitude, in_longitude, out_latitude, out_longitude,
-        in_map_link, out_map_link, date, month_year, map_link, created_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+       (emp_id, emp_email, status, punch_in_time, punch_out_time,
+        in_location, out_location, in_latitude, in_longitude,
+        out_latitude, out_longitude, in_map_link, out_map_link,
+        date, month_year, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [
-        employeeEmail,
-        rowData.status,
-        latitude,
-        longitude,
-        locationLabel,
-        timestampString,
-        timestampString,
-        null,
-        locationLabel,
-        null,
-        latitude,
-        longitude,
-        null,
-        null,
-        mapLink,
-        null,
-        dateOnly,
-        monthYear,
-        mapLink,
-        timestampString
+        empId || '', empEmail, 'Punch In', timestamp, null,
+        locLabel, null, lat, lng, null, null, mapLink, null,
+        dateOnly, monthYear, timestamp
       ]
     );
-    return;
+  } else {
+    if (!rec || !rec.punch_in_time)
+      throw new Error('Please punch IN first.');
+    if (rec.punch_out_time)
+      throw new Error('Already punched OUT today.');
+
+    await pool.query(
+      `UPDATE attendance_logs
+          SET status='Punch Out', punch_out_time=$2,
+              out_location=$3, out_latitude=$4, out_longitude=$5,
+              out_map_link=$6, month_year=$7
+        WHERE id=$1`,
+      [rec.id, timestamp, locLabel, lat, lng, mapLink, monthYear]
+    );
   }
 
-  if (!existing || !existing.punch_in_time) {
-    throw new Error('Please punch IN first.');
-  }
-  if (existing.punch_out_time) {
-    throw new Error('OUT already recorded for today.');
-  }
-
-  await pool.query(
-    `UPDATE attendance_logs
-        SET status = $2,
-            latitude = $3,
-            longitude = $4,
-            location_name = $5,
-            punch_out_time = $6,
-            out_location = $7,
-            out_latitude = $8,
-            out_longitude = $9,
-            out_map_link = $10,
-            month_year = $11,
-            map_link = COALESCE($12, map_link)
-      WHERE id = $1`,
-    [
-      existing.id,
-      rowData.status,
-      latitude,
-      longitude,
-      locationLabel,
-      timestampString,
-      locationLabel,
-      latitude,
-      longitude,
-      mapLink,
-      monthYear,
-      mapLink
-    ]
-  );
+  return { timestamp, dateOnly, monthYear, lat, lng, locLabel, mapLink };
 }
 
+// ─── AUTO PUNCH-OUT ────────────────────────────────────────────────────────────
 async function autoPunchOutPendingRecords(referenceTime = new Date()) {
   const todayKey = getLocalDateKey(referenceTime);
-  const pending = await pool.query(
-    `SELECT id, emp_email, date, punch_in_time
+  const pending  = await pool.query(
+    `SELECT id, emp_id, emp_email, date
        FROM attendance_logs
       WHERE punch_in_time IS NOT NULL
         AND punch_out_time IS NULL
         AND date < $1
-      ORDER BY date ASC, created_at ASC, id ASC`,
+      ORDER BY date ASC, id ASC`,
     [todayKey]
   );
 
   let updatedCount = 0;
-
-  for (const record of pending.rows) {
-    const closeTime = `${record.date} 23:59:59.000`;
+  for (const r of pending.rows) {
+    const closeTime = `${r.date} 23:59:59.000`;
     await pool.query(
       `UPDATE attendance_logs
-          SET status = $2,
-              punch_out_time = $3,
-              out_location = $4,
-              out_map_link = $5
-        WHERE id = $1`,
-      [record.id, 'Auto Punch Out', closeTime, 'System Auto Punch-Out', null]
+          SET status='Auto Punch Out', punch_out_time=$2,
+              out_location=$3, out_map_link=$4
+        WHERE id=$1`,
+      [r.id, closeTime, 'System Auto Punch-Out', null]
     );
-
-    try {
-      appendToExcel({
-        email: record.emp_email,
-        status: 'Auto Punch Out',
-        latitude: '',
-        longitude: '',
-        locationName: 'System Auto Punch-Out',
-        timestamp: closeTime,
-        monthYear: getMonthYearKey(new Date(`${record.date}T12:00:00`))
-      });
-    } catch (excelErr) {
-      console.error('Excel auto punch-out sync error:', excelErr.message);
-    }
-
-    updatedCount += 1;
+    appendToExcel({
+      emp_id: r.emp_id, email: r.emp_email, status: 'Auto Punch Out',
+      latitude: '', longitude: '', locationName: 'System Auto Punch-Out',
+      timestamp: closeTime, monthYear: getMonthYearKey(new Date(`${r.date}T12:00:00`))
+    });
+    updatedCount++;
   }
-
   return { updatedCount };
 }
 
 function scheduleAutoPunchOut() {
   cron.schedule('0 0 * * *', async () => {
     try {
-      const result = await autoPunchOutPendingRecords();
-      if (result.updatedCount > 0) {
-        console.log(`✅ Auto punch-out completed for ${result.updatedCount} record(s)`);
-      }
+      const r = await autoPunchOutPendingRecords();
+      if (r.updatedCount > 0) console.log(`✅ Auto punch-out: ${r.updatedCount} record(s)`);
     } catch (err) {
-      console.error('Auto punch-out job failed:', err.message);
+      console.error('Auto punch-out job error:', err.message);
     }
-  }, {
-    timezone: TIME_ZONE
-  });
+  }, { timezone: TIME_ZONE });
+  console.log('🕐 Auto punch-out cron scheduled (midnight IST)');
 }
 
-router.get('/api/attendance/today', async (req, res) => {
-  const authUser = req.user || req.session.user;
-  const employeeEmail = authUser && authUser.email ? authUser.email.toLowerCase() : '';
+// ═══════════════════════════════════════════════════════════════════════════════
+// HTTP ROUTES
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  if (!employeeEmail) {
-    return res.status(401).json({ authenticated: false, message: 'Please sign in with Google first.' });
-  }
+// ── GET / ─── Render main index.ejs (legacy portal UI) ───────────────────────
+router.get('/', (req, res) => {
+  res.render('index', { initialUser: req.user || req.session.user || null });
+});
+
+// ── GET /api/attendance/today ─── Used by index.ejs frontend ──────────────────
+router.get('/api/attendance/today', async (req, res) => {
+  const authUser    = req.user || req.session.user;
+  const empEmail    = authUser?.email?.toLowerCase() || '';
+  if (!empEmail) return res.status(401).json({ authenticated: false, message: 'Please sign in first.' });
 
   try {
-    const state = await getTodayAttendanceState(employeeEmail);
-    res.json({ authenticated: true, employeeEmail, ...state });
+    const state = await getTodayAttendanceState(null, empEmail);
+    res.json({ authenticated: true, employeeEmail: empEmail, ...state });
   } catch (err) {
     res.status(500).json({ authenticated: true, message: err.message });
   }
 });
 
-router.get('/', (req, res) => res.render('index', {
-  initialUser: req.user || req.session.user || null
-}));
-
+// ── POST /punch ─── Used by index.ejs frontend (Google users) ─────────────────
 router.post('/punch', async (req, res) => {
   try {
     const authUser = req.user || req.session.user;
-    const employeeEmail = authUser && authUser.email ? authUser.email.toLowerCase() : '';
-    const { status, latitude, longitude, locationName, timestamp } = req.body;
-    if (!employeeEmail) {
-      return res.status(401).json({ success: false, message: 'Please sign in with Google first.' });
-    }
-    if (!status || !latitude || !longitude) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
-    }
-    const punchTimestamp = getIstTimestampString(new Date());
-    await saveToDB(employeeEmail, { email: employeeEmail, status, latitude, longitude, locationName, timestamp: punchTimestamp });
-    try {
-      appendToExcel({ email: employeeEmail, status, latitude, longitude, locationName, timestamp: punchTimestamp, monthYear: getMonthYearKey(new Date()) });
-    } catch (excelErr) {
-      console.error('Excel save error (non-fatal):', excelErr.message);
-    }
+    const empEmail = authUser?.email?.toLowerCase() || '';
+    if (!empEmail) return res.status(401).json({ success: false, message: 'Please sign in first.' });
+
+    const { status, latitude, longitude, locationName } = req.body;
+    if (!status || !latitude || !longitude)
+      return res.status(400).json({ success: false, message: 'Missing required fields.' });
+
+    await savePunch(null, empEmail, authUser.name || empEmail, status, latitude, longitude, locationName);
+
+    appendToExcel({
+      email: empEmail, name: authUser.name || '',
+      status, latitude, longitude, locationName,
+      timestamp: getIstTimestampString(), monthYear: getMonthYearKey()
+    });
+
     res.json({ success: true, message: `${status} recorded!` });
   } catch (err) {
-    console.error(err);
-    res.status(400).json({ success: false, message: err.message || 'Server error' });
+    res.status(400).json({ success: false, message: err.message || 'Server error.' });
   }
 });
 
+// ── GET /download ─── Download Excel file ─────────────────────────────────────
 router.get('/download', (req, res) => {
-  if (fs.existsSync(EXCEL_PATH)) res.download(EXCEL_PATH, 'attendance.xlsx');
-  else res.status(404).send('File not found');
+  if (fs.existsSync(EXCEL_PATH)) return res.download(EXCEL_PATH, 'attendance.xlsx');
+  res.status(404).send('File not found. No attendance recorded yet.');
 });
 
+// Attach helpers for use by other modules / tests
 router.autoPunchOutPendingRecords = autoPunchOutPendingRecords;
-router.scheduleAutoPunchOut = scheduleAutoPunchOut;
+router.scheduleAutoPunchOut       = scheduleAutoPunchOut;
+router.savePunch                  = savePunch;
+router.getTodayAttendanceState    = getTodayAttendanceState;
 
 module.exports = router;

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Mark Attendance — IED HRMS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --ink:#0f1923;--cream:#f5f0e8;--green:#2d6a4f;--rust:#c94a2b;--gold:#d4a843;
+      --card:#fff;--border:#e0d9ce;--muted:#7a7166;--navy:#1e3a5f;
+    }
+    body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+    header{background:var(--green);height:60px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+    .h-left{display:flex;align-items:center;gap:12px}
+    .h-logo{width:34px;height:34px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.15);padding:3px}
+    .h-brand{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff}
+    .h-right{display:flex;align-items:center;gap:10px}
+    .h-name{font-size:12.5px;color:rgba(255,255,255,.8);background:rgba(255,255,255,.12);padding:4px 12px;border-radius:20px}
+    .nav-links{display:flex;gap:4px}
+    .nav-links a{padding:5px 12px;color:rgba(255,255,255,.7);text-decoration:none;font-size:12.5px;font-weight:500;border-radius:6px;transition:all .2s}
+    .nav-links a:hover,.nav-links a.act{background:rgba(255,255,255,.15);color:#fff}
+    .btn-lo{padding:5px 13px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;font-size:12px;font-weight:500;text-decoration:none;transition:all .2s}
+    .btn-lo:hover{background:rgba(255,255,255,.22)}
+
+    main{max-width:520px;margin:0 auto;padding:28px 16px}
+
+    /* Status banner */
+    .status-bar{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:12px;
+                padding:12px 18px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);
+                border:1.5px solid var(--border);font-size:13.5px;font-weight:500;transition:all .3s}
+    .status-bar.loading{border-color:#fed7aa;background:#fff7ed;color:#92400e}
+    .status-bar.success{border-color:#86efac;background:#f0fdf4;color:#15803d}
+    .status-bar.error{border-color:#fca5a5;background:#fff0ee;color:#b91c1c}
+    .pulse{width:10px;height:10px;border-radius:50%;background:currentColor;flex-shrink:0;animation:pulse 1.5s ease infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.85)}}
+
+    /* Main Card */
+    .card{background:var(--card);border-radius:20px;padding:28px;box-shadow:0 6px 32px rgba(0,0,0,.07);border:1px solid var(--border)}
+
+    /* Employee info */
+    .emp-row{display:flex;align-items:center;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--border);margin-bottom:20px}
+    .avatar{width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--green),#1a4a35);
+            display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;
+            font-size:22px;font-weight:800;color:#fff;flex-shrink:0}
+    .emp-meta .emp-name{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--ink)}
+    .emp-meta .emp-id{font-size:12px;color:var(--muted);margin-top:3px}
+    .emp-meta .emp-dept{font-size:11.5px;background:#eff6ff;color:#1d4ed8;padding:2px 9px;border-radius:20px;margin-top:5px;display:inline-block}
+    .emp-date{font-size:12.5px;color:var(--muted);margin-left:auto;text-align:right}
+    .clock{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--ink)}
+
+    /* Info grid */
+    .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
+    .info-item{background:var(--cream);border-radius:12px;padding:12px 14px}
+    .info-label{display:block;font-size:10.5px;font-weight:500;color:var(--muted);
+                text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .info-val{font-size:13px;font-weight:500;color:var(--ink)}
+    .info-val.loading-val{color:var(--muted)}
+
+    /* Today's record */
+    .record-box{background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;
+                padding:16px 18px;margin-bottom:22px}
+    .record-title{font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+    .record-row{display:flex;align-items:center;gap:12px}
+    .rec-item{flex:1;text-align:center}
+    .rec-label{display:block;font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .rec-time{display:block;font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-top:2px}
+    .rec-time.in-t{color:#15803d}
+    .rec-time.out-t{color:#1d4ed8}
+    .rec-arrow{font-size:20px;color:var(--muted)}
+
+    /* Buttons */
+    .btn-group{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+    .btn{
+      padding:18px 12px;border:none;border-radius:14px;font-family:'Syne',sans-serif;
+      font-size:15px;font-weight:700;cursor:pointer;transition:all .25s;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+    }
+    .btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+    .btn-in{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;box-shadow:0 4px 20px rgba(22,163,74,.3)}
+    .btn-in:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(22,163,74,.4)}
+    .btn-out{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;box-shadow:0 4px 20px rgba(37,99,235,.3)}
+    .btn-out:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(37,99,235,.4)}
+    .btn-icon{font-size:20px}
+    .btn.done{opacity:.65}
+
+    /* Message */
+    .msg{border-radius:10px;padding:12px 16px;font-size:13px;font-weight:500;margin-top:4px;display:none;text-align:center}
+    .msg.success{background:#f0fdf4;color:#15803d;border:1px solid #86efac}
+    .msg.error{background:#fff0ee;color:#b91c1c;border:1px solid #fca5a5}
+
+    /* Toast */
+    .toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);
+           background:var(--ink);color:#fff;padding:12px 22px;border-radius:30px;font-size:13.5px;
+           font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.2);opacity:0;transition:all .3s;pointer-events:none;
+           white-space:nowrap;z-index:999}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    @media(max-width:480px){
+      .info-grid{grid-template-columns:1fr}
+      .emp-date{display:none}
+      .btn{padding:16px 10px;font-size:14px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="h-left">
+    <img src="/images/IED_LOGO.jpg" alt="IED" class="h-logo" onerror="this.style.display='none'"/>
+    <div class="h-brand">IED HRMS</div>
+  </div>
+  <div class="h-right">
+    <div class="nav-links">
+      <a href="/emp/attendance" class="act">📍 Attendance</a>
+    </div>
+    <span class="h-name">👤 <%= employee.name %></span>
+  </div>
+</header>
+
+<main>
+  <!-- Status -->
+  <div class="status-bar loading" id="statusBar">
+    <div class="pulse"></div>
+    <span id="statusTxt">Fetching your location…</span>
+  </div>
+
+  <div class="card">
+    <!-- Employee Info -->
+    <div class="emp-row">
+      <div class="avatar" id="avatarEl"><%= employee.name[0].toUpperCase() %></div>
+      <div class="emp-meta">
+        <div class="emp-name"><%= employee.name %></div>
+        <div class="emp-id"><%= employee.emp_id %> · <%= employee.email %></div>
+        <% if(employee.department){ %><span class="emp-dept"><%= employee.department %></span><% } %>
+      </div>
+      <div class="emp-date">
+        <div class="clock" id="clock">—</div>
+        <div id="dateDisp" style="font-size:11.5px;color:var(--muted);margin-top:3px">—</div>
+      </div>
+    </div>
+
+    <!-- Location Info -->
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">📍 Location</span>
+        <span class="info-val loading-val" id="locName">Fetching…</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">🌐 Coordinates</span>
+        <span class="info-val loading-val" id="coords">—</span>
+      </div>
+    </div>
+
+    <!-- Today's Record (shown after loading) -->
+    <div class="record-box" id="recordBox" style="display:none">
+      <div class="record-title">Today's Record</div>
+      <div class="record-row">
+        <div class="rec-item">
+          <span class="rec-label">Punch IN</span>
+          <span class="rec-time in-t" id="inTime">—</span>
+        </div>
+        <div class="rec-arrow">→</div>
+        <div class="rec-item">
+          <span class="rec-label">Punch OUT</span>
+          <span class="rec-time out-t" id="outTime">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="btn-group">
+      <button class="btn btn-in" id="btnIn" onclick="punch('Punch In')" disabled>
+        <span class="btn-icon">🟢</span>Punch IN
+      </button>
+      <button class="btn btn-out" id="btnOut" onclick="punch('Punch Out')" disabled>
+        <span class="btn-icon">🔴</span>Punch OUT
+      </button>
+    </div>
+
+    <div class="msg" id="msgBox"></div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let lat=null, lng=null, locName='', locationReady=false;
+  let state={canPunchIn:false,canPunchOut:false,inTimeLabel:null,outTimeLabel:null};
+
+  // Clock
+  function tick(){
+    const n=new Date();
+    document.getElementById('clock').textContent=n.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    document.getElementById('dateDisp').textContent=n.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  }
+  tick(); setInterval(tick,1000);
+
+  // Load today state
+  async function loadState(){
+    try{
+      const r=await fetch('/emp/api/today',{credentials:'same-origin'});
+      const d=await r.json();
+      if(!d.success) throw new Error(d.message);
+      state={canPunchIn:!!d.canPunchIn,canPunchOut:!!d.canPunchOut,inTimeLabel:d.inTimeLabel,outTimeLabel:d.outTimeLabel};
+      if(d.record){
+        document.getElementById('recordBox').style.display='block';
+        if(d.inTimeLabel) document.getElementById('inTime').textContent=d.inTimeLabel;
+        if(d.outTimeLabel) document.getElementById('outTime').textContent=d.outTimeLabel;
+      }
+      syncBtns();
+    }catch(e){ syncBtns(); }
+  }
+
+  // Geolocation
+  function startLoc(){
+    if(!navigator.geolocation){ setStatus('Geolocation not supported','error'); locationReady=true; syncBtns(); return; }
+    navigator.geolocation.getCurrentPosition(onGot,onErr,{enableHighAccuracy:true,timeout:12000});
+  }
+
+  function onGot(pos){
+    lat=pos.coords.latitude.toFixed(6); lng=pos.coords.longitude.toFixed(6);
+    document.getElementById('coords').textContent=`${lat}, ${lng}`;
+    document.getElementById('coords').classList.remove('loading-val');
+    setStatus('Location found ✓','success');
+    reverseGeo(lat,lng);
+    locationReady=true; syncBtns();
+  }
+
+  function onErr(){
+    setStatus('Location denied — punch allowed without location','error');
+    locName='Unknown'; document.getElementById('locName').textContent='Not available';
+    document.getElementById('locName').classList.remove('loading-val');
+    locationReady=true; syncBtns();
+  }
+
+  function reverseGeo(la,lo){
+    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${la}&lon=${lo}&zoom=15&accept-language=en`)
+      .then(r=>r.json()).then(d=>{
+        const a=d.address;
+        locName=a.suburb||a.neighbourhood||a.village||a.town||a.city||a.county||`${la},${lo}`;
+        document.getElementById('locName').textContent=locName;
+        document.getElementById('locName').classList.remove('loading-val');
+      }).catch(()=>{ locName=`${la},${lo}`; document.getElementById('locName').textContent=locName; });
+  }
+
+  function setStatus(txt,type){
+    const b=document.getElementById('statusBar');
+    b.className='status-bar '+type;
+    document.getElementById('statusTxt').textContent=txt;
+  }
+
+  function syncBtns(){
+    const ready=locationReady||(!state.canPunchIn&&!state.canPunchOut);
+    document.getElementById('btnIn').disabled=!ready||!state.canPunchIn;
+    document.getElementById('btnOut').disabled=!ready||!state.canPunchOut;
+    if(state.inTimeLabel) document.getElementById('btnIn').classList.add('done');
+    if(state.outTimeLabel) document.getElementById('btnOut').classList.add('done');
+  }
+
+  async function punch(status){
+    if(!locationReady){ showMsg('Please wait for location…','error'); return; }
+    const btn=document.getElementById(status==='Punch In'?'btnIn':'btnOut');
+    btn.disabled=true;
+    btn.innerHTML='<span class="btn-icon">⏳</span>Saving…';
+    try{
+      const res=await fetch('/emp/api/punch',{
+        method:'POST',credentials:'same-origin',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({status,latitude:lat,longitude:lng,locationName:locName})
+      });
+      const d=await res.json();
+      if(d.success){
+        const t=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+        if(status==='Punch In'){
+          document.getElementById('inTime').textContent=t;
+          document.getElementById('recordBox').style.display='block';
+          btn.innerHTML='<span class="btn-icon">✅</span>IN Done';
+          state.canPunchIn=false; state.canPunchOut=true; state.inTimeLabel=t;
+        } else {
+          document.getElementById('outTime').textContent=t;
+          btn.innerHTML='<span class="btn-icon">✅</span>OUT Done';
+          state.canPunchOut=false; state.outTimeLabel=t;
+        }
+        syncBtns();
+        showToast(`✅ ${status} at ${t} — ${locName}`);
+        setStatus(`${status} recorded at ${t}`,'success');
+      } else {
+        btn.disabled=false;
+        btn.innerHTML=status==='Punch In'?'<span class="btn-icon">🟢</span>Punch IN':'<span class="btn-icon">🔴</span>Punch OUT';
+        showMsg(d.message||'Something went wrong','error');
+      }
+    }catch(e){
+      btn.disabled=false;
+      btn.innerHTML=status==='Punch In'?'<span class="btn-icon">🟢</span>Punch IN':'<span class="btn-icon">🔴</span>Punch OUT';
+      showMsg('Network error. Check connection.','error');
+    }
+  }
+
+  function showMsg(txt,type){
+    const b=document.getElementById('msgBox');
+    b.textContent=txt; b.className='msg '+type; b.style.display='block';
+    setTimeout(()=>b.style.display='none',4500);
+  }
+  function showToast(msg){
+    const t=document.getElementById('toast');
+    t.textContent=msg; t.classList.add('show');
+    setTimeout(()=>t.classList.remove('show'),3500);
+  }
+
+  // Init
+  loadState(); startLoc();
+</script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>My Attendance — IED HRMS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--ink:#0f1923;--cream:#f5f0e8;--green:#2d6a4f;--rust:#c94a2b;--gold:#d4a843;
+          --card:#fff;--border:#e0d9ce;--muted:#7a7166;--navy:#1e3a5f;--shadow:0 4px 20px rgba(0,0,0,.07)}
+    body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+    header{background:var(--green);height:60px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+    .h-left{display:flex;align-items:center;gap:12px}
+    .h-logo{width:34px;height:34px;object-fit:contain;border-radius:8px;background:rgba(255,255,255,.15);padding:3px}
+    .h-brand{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff}
+    .h-right{display:flex;align-items:center;gap:8px}
+    .h-name{font-size:12.5px;color:rgba(255,255,255,.8);background:rgba(255,255,255,.12);padding:4px 12px;border-radius:20px}
+    .nav-links{display:flex;gap:4px}
+    .nav-links a{padding:5px 12px;color:rgba(255,255,255,.7);text-decoration:none;font-size:12.5px;font-weight:500;border-radius:6px;transition:all .2s}
+    .nav-links a:hover,.nav-links a.act{background:rgba(255,255,255,.15);color:#fff}
+    .btn-lo{padding:5px 13px;background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:8px;font-size:12px;font-weight:500;text-decoration:none;transition:all .2s}
+    .btn-lo:hover{background:rgba(255,255,255,.22)}
+
+    main{max-width:1100px;margin:0 auto;padding:24px 16px}
+
+    /* Summary cards */
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px}
+    .scard{background:var(--card);border-radius:14px;padding:18px 18px;box-shadow:var(--shadow);
+           border:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+    .snum{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;color:var(--ink)}
+    .slabel{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .sicon{font-size:20px;margin-bottom:2px}
+
+    /* Filter */
+    .fcard{background:var(--card);border-radius:14px;padding:18px 22px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:20px}
+    .frow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+    .fg{display:flex;flex-direction:column;gap:4px}
+    .fg label{font-size:10.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .fg select{padding:9px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;background:#fafaf8;cursor:pointer}
+    .fg select:focus{border-color:var(--green)}
+    .btn-f{padding:9px 18px;background:var(--green);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer}
+    .btn-r{padding:9px 14px;background:var(--cream);color:var(--muted);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:500;text-decoration:none;font-family:'DM Sans',sans-serif}
+
+    /* Table */
+    .tcard{background:var(--card);border-radius:14px;box-shadow:var(--shadow);overflow:hidden;border:1px solid var(--border)}
+    .tbar{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+    .ttitle{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink)}
+    .tcount{font-size:11.5px;color:var(--muted);margin-top:2px}
+    .tscroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:620px}
+    thead th{background:#fafaf8;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;
+             text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--border)}
+    tbody tr{border-bottom:1px solid #f5f0e8;transition:background .1s}
+    tbody tr:hover{background:#fafaf8}
+    tbody tr:last-child{border-bottom:none}
+    td{padding:12px 14px;vertical-align:middle}
+    .tval-in{font-weight:600;color:#15803d}
+    .tval-out{font-weight:600;color:#1d4ed8}
+    .loc{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;color:var(--muted)}
+    .map-a{color:#3b82f6;font-size:11.5px;text-decoration:none;font-weight:500}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+    .b-full{background:#dcfce7;color:#15803d}
+    .b-half{background:#fef9c3;color:#854d0e}
+    .b-short{background:#fee2e2;color:#b91c1c}
+    .b-pending{background:#e0e7ff;color:#4338ca}
+    .b-none{background:var(--cream);color:var(--muted)}
+    .empty{text-align:center;padding:50px;color:var(--muted)}
+    .empty .ei{font-size:38px;margin-bottom:12px}
+
+    @media(max-width:600px){
+      main{padding:16px 12px}
+      .stats{grid-template-columns:1fr 1fr 1fr}
+      header{padding:0 14px}
+      .h-name{display:none}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="h-left">
+    <img src="/images/IED_LOGO.jpg" alt="IED" class="h-logo" onerror="this.style.display='none'"/>
+    <div class="h-brand">IED HRMS</div>
+  </div>
+  <div class="h-right">
+    <div class="nav-links">
+      <a href="/emp/attendance">📍 Attendance</a>
+    </div>
+    <span class="h-name">👤 <%= employee.name %></span>
+  </div>
+</header>
+
+<main>
+  <!-- Summary -->
+  <div class="stats">
+    <div class="scard">
+      <div class="sicon">📅</div>
+      <div class="snum"><%= summary.total_present||0 %></div>
+      <div class="slabel">Present Days</div>
+    </div>
+    <div class="scard">
+      <div class="sicon">✅</div>
+      <div class="snum" style="color:#15803d"><%= summary.full_day||0 %></div>
+      <div class="slabel">Full Day (≥8h)</div>
+    </div>
+    <div class="scard">
+      <div class="sicon">🌗</div>
+      <div class="snum" style="color:#854d0e"><%= summary.half_day||0 %></div>
+      <div class="slabel">Half Day (4–8h)</div>
+    </div>
+    <div class="scard">
+      <div class="sicon">⏱</div>
+      <div class="snum" style="color:#b91c1c"><%= summary.short_day||0 %></div>
+      <div class="slabel">Short Day (&lt;4h)</div>
+    </div>
+    <div class="scard">
+      <div class="sicon">⏳</div>
+      <div class="snum" style="color:#4338ca"><%= summary.pending_out||0 %></div>
+      <div class="slabel">Pending OUT</div>
+    </div>
+    <div class="scard">
+      <div class="sicon">🕐</div>
+      <div class="snum" style="color:var(--navy)"><%= summary.total_hours ? summary.total_hours.toFixed(1) : '0.0' %></div>
+      <div class="slabel">Total Hours</div>
+    </div>
+  </div>
+
+  <!-- Month Filter -->
+  <div class="fcard">
+    <form method="GET" action="/emp/report">
+      <div class="frow">
+        <div class="fg">
+          <label>Filter by Month</label>
+          <select name="month_year">
+            <option value="">— All months —</option>
+            <% months.forEach(m => { %>
+            <option value="<%= m %>" <%= selected_month===m?'selected':'' %>><%= m %></option>
+            <% }) %>
+          </select>
+        </div>
+        <button type="submit" class="btn-f">Apply</button>
+        <a href="/emp/report" class="btn-r">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Table -->
+  <div class="tcard">
+    <div class="tbar">
+      <div>
+        <div class="ttitle">My Attendance Log</div>
+        <div class="tcount"><%= logs.length %> record(s) · <%= employee.name %> (<%= employee.emp_id %>)</div>
+      </div>
+    </div>
+    <div class="tscroll">
+      <% if(!logs.length){ %>
+        <div class="empty"><div class="ei">📭</div><p>No attendance records found.</p></div>
+      <% } else { %>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Month</th>
+            <th>Punch IN</th>
+            <th>In Location</th>
+            <th>In Map</th>
+            <th>Punch OUT</th>
+            <th>Out Location</th>
+            <th>Out Map</th>
+            <th>Hours</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% logs.forEach((r,i) => {
+            const h=r.hours_worked?parseFloat(r.hours_worked):null;
+            let ds='—',bc='b-none';
+            if(h!==null){if(h>=8){ds='Full Day';bc='b-full';}else if(h>=4){ds='Half Day';bc='b-half';}else{ds='Short';bc='b-short';}}
+            else if(r.punch_in_time){ds='Pending OUT';bc='b-pending';}
+          %>
+          <tr>
+            <td style="color:var(--muted)"><%= i+1 %></td>
+            <td style="white-space:nowrap;font-size:12.5px"><%= formatDateDMY(r.date) %></td>
+            <td style="font-size:11.5px;color:var(--muted)"><%= r.month_year||'—' %></td>
+            <td><% if(r.punch_in_time){ %><span class="tval-in">🟢 <%= formatTimeHHMM(r.punch_in_time) %></span><% }else{ %>—<% } %></td>
+            <td><span class="loc" title="<%= r.in_location||'' %>"><%= r.in_location||(r.punch_in_time?'Unknown':'—') %></span></td>
+            <td><% if(r.in_map_link){ %><a href="<%= r.in_map_link %>" target="_blank" class="map-a">📍 Map</a><% }else{ %>—<% } %></td>
+            <td><% if(r.punch_out_time){ %><span class="tval-out">🔵 <%= formatTimeHHMM(r.punch_out_time) %></span><% }else{ %>—<% } %></td>
+            <td><span class="loc" title="<%= r.out_location||'' %>"><%= r.out_location||(r.punch_out_time?'Unknown':'—') %></span></td>
+            <td><% if(r.out_map_link){ %><a href="<%= r.out_map_link %>" target="_blank" class="map-a">📍 Map</a><% }else{ %>—<% } %></td>
+            <td style="font-family:'Syne',sans-serif;font-weight:700;color:var(--navy)"><%= h!==null?h.toFixed(2)+' h':'—' %></td>
+            <td><span class="badge <%= bc %>"><%= ds %></span></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <% } %>
+    </div>
+  </div>
+</main>
+</body>
+</html>

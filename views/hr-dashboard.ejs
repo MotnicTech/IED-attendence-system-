@@ -1,162 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>HR Dashboard — IED Attendance</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <title>HR Dashboard — IED HRMS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
     :root{
-      --navy:#1e3a5f;--green:#2d6a4f;
-      --g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g400:#9ca3af;--g600:#4b5563;--g800:#1f2937;
-      --in-bg:#dcfce7;--in-fg:#15803d;
-      --out-bg:#dbeafe;--out-fg:#1d4ed8;
-      --warn-bg:#fef9c3;--warn-fg:#854d0e;
-      --shadow:0 4px 20px rgba(0,0,0,.08)
+      --ink:#0f1923;--cream:#f5f0e8;--rust:#c94a2b;--gold:#d4a843;
+      --green:#2d6a4f;--card:#fff;--border:#e0d9ce;--muted:#7a7166;
+      --navy:#1e3a5f;--shadow:0 4px 24px rgba(0,0,0,.07);
     }
-    body{font-family:'Inter',sans-serif;background:#eef2f7;color:var(--g800);min-height:100vh}
-
-    /* HEADER with logo left side - crisp & clear */
-    header{background:linear-gradient(135deg,var(--navy),var(--green));height:72px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 12px rgba(0,0,0,.18)}
-    .h-logo{display:flex;align-items:center;gap:14px;flex-shrink:0}
-    .h-logo-img{
-      width:46px;
-      height:46px;
-      object-fit:contain;
-      background:rgba(255,255,255,0.1);
-      border-radius:12px;
-      padding:4px;
-      box-shadow:0 2px 6px rgba(0,0,0,0.1);
-      display:block;
+    body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+    header{
+      background:var(--ink);min-height:64px;padding:10px 28px;
+      display:flex;align-items:center;justify-content:space-between;
+      gap:12px;box-shadow:0 2px 16px rgba(0,0,0,.2);position:sticky;top:0;z-index:100;flex-wrap:wrap;
     }
-    .logo-text-group{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-    .brand-name{font-size:20px;font-weight:800;color:#fff;letter-spacing:-.3px}
-    .h-badge{background:rgba(255,255,255,.18);color:#fff;font-size:11px;font-weight:700;padding:4px 12px;border-radius:40px;text-transform:uppercase;letter-spacing:.6px}
-    .h-right{display:flex;align-items:center;gap:12px}
-    .h-user{color:rgba(255,255,255,.9);font-size:13px;font-weight:500;background:rgba(0,0,0,0.15);padding:6px 12px;border-radius:40px}
-    .btn-logout{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.35);padding:7px 16px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s}
-    .btn-logout:hover{background:rgba(255,255,255,.28);transform:scale(0.97)}
+    .h-left{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+    .h-logo{width:38px;height:38px;object-fit:contain;border-radius:10px;background:rgba(255,255,255,.1);padding:3px}
+    .h-brand{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px}
+    .h-brand span{color:var(--gold)}
+    .h-nav{display:flex;gap:4px;margin-left:12px;flex-wrap:wrap}
+    .h-nav a{color:rgba(255,255,255,.65);text-decoration:none;font-size:13px;font-weight:500;padding:6px 14px;border-radius:8px;transition:all .2s}
+    .h-nav a:hover,.h-nav a.active{background:rgba(255,255,255,.12);color:#fff}
+    .h-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .h-user{font-size:12.5px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.08);padding:5px 12px;border-radius:30px}
+    .btn-out{padding:6px 14px;background:var(--rust);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:none;font-family:'DM Sans',sans-serif}
+    main{max-width:1400px;margin:0 auto;padding:24px 20px}
 
-    main{max-width:1400px;margin:0 auto;padding:26px 20px}
-
-    /* STAT CARDS */
-    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:22px}
-    .scard{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;transition:transform 0.1s ease}
+    /* ── STAT CARDS ── */
+    .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px}
+    .scard{background:var(--card);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow);display:flex;align-items:center;gap:16px;border:1px solid var(--border);transition:transform .15s}
     .scard:hover{transform:translateY(-2px)}
-    .sicon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
-    .snum{font-size:28px;font-weight:800;line-height:1}
-    .slabel{font-size:12px;color:var(--g400);font-weight:500;margin-top:3px}
+    .sicon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+    .snum{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;line-height:1;color:var(--ink)}
+    .slabel{font-size:11.5px;color:var(--muted);font-weight:400;margin-top:3px}
 
-    /* FILTER */
-    .fcard{background:#fff;border-radius:14px;padding:20px 22px;box-shadow:var(--shadow);margin-bottom:22px}
-    .ftitle{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px}
-    .quick{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
-    .qbtn{padding:5px 13px;background:var(--g100);border:none;border-radius:7px;font-size:12px;font-weight:600;color:var(--g600);cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s}
-    .qbtn:hover{background:var(--navy);color:#fff;transform:translateY(-1px)}
+    /* ── FILTER CARD ── */
+    .fcard{background:var(--card);border-radius:16px;box-shadow:var(--shadow);border:1px solid var(--border);padding:20px 24px;margin-bottom:20px}
+    .fhead{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:14px}
+    .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+    .qbtn{padding:5px 14px;background:var(--cream);border:1.5px solid var(--border);border-radius:30px;font-size:12px;font-weight:500;color:var(--muted);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+    .qbtn:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
     .frow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
     .fg{display:flex;flex-direction:column;gap:4px}
-    .fg label{font-size:11px;font-weight:700;color:var(--g600);text-transform:uppercase;letter-spacing:.4px}
-    .fg input{padding:9px 12px;border:2px solid var(--g200);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;outline:none;min-width:155px;transition:border-color .2s}
-    .fg input:focus{border-color:var(--navy);box-shadow:0 0 0 2px rgba(30,58,95,0.1)}
-    .btn-apply{padding:9px 20px;background:var(--navy);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
-    .btn-apply:hover{opacity:.88;transform:translateY(-1px)}
-    .btn-reset{padding:9px 15px;background:var(--g100);color:var(--g600);border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none;transition:all .2s}
-    .btn-reset:hover{background:var(--g200);color:var(--g800)}
+    .fg label{font-size:10.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .fg input{padding:9px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;min-width:150px;transition:border-color .2s;background:#fafaf8}
+    .fg input:focus{border-color:var(--rust)}
+    .btn-apply{padding:9px 20px;background:var(--rust);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .2s}
+    .btn-apply:hover{background:#b03d22}
+    .btn-reset{padding:9px 16px;background:var(--cream);color:var(--muted);border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;transition:all .2s}
+    .btn-reset:hover{background:#e8e2d8}
 
-    /* TABLE CARD */
-    .tcard{background:#fff;border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
-    .thead-bar{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--g200);flex-wrap:wrap;gap:12px}
-    .ttitle{font-size:15px;font-weight:700}
-    .tcount{font-size:12px;color:var(--g400);margin-top:2px}
-    .btn-export{display:flex;align-items:center;gap:7px;padding:9px 18px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none;box-shadow:0 2px 8px rgba(22,163,74,.3);transition:all .2s}
+    /* ── TABLE CARD ── */
+    .tcard{background:var(--card);border-radius:16px;box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden;margin-bottom:20px}
+    .tbar{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:12px}
+    .tbar-left .ttitle{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink)}
+    .tbar-left .tsub{font-size:11.5px;color:var(--muted);margin-top:2px}
+    .tbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn-export{display:flex;align-items:center;gap:7px;padding:9px 18px;background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;text-decoration:none;box-shadow:0 3px 12px rgba(22,163,74,.25);transition:all .2s}
     .btn-export:hover{opacity:.9;transform:translateY(-1px)}
-
     .tscroll{overflow-x:auto}
-    table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:780px}
-    thead th{background:var(--g50);padding:10px 12px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--g400);border-bottom:1px solid var(--g200);white-space:nowrap}
-    thead th.group-in{background:#f0fdf4;color:#15803d}
-    thead th.group-out{background:#eff6ff;color:#1d4ed8}
-    tbody tr{border-bottom:1px solid var(--g100);transition:background .12s}
-    tbody tr:hover{background:var(--g50)}
-    tbody tr:last-child{border-bottom:none}
-    td{padding:11px 12px;vertical-align:middle}
 
-    /* Badges */
-    .b-full{display:inline-flex;align-items:center;gap:4px;background:#dcfce7;color:#15803d;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+    /* ── SUMMARY TABLE (main big one like image) ── */
+    .sum-table{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+    .sum-table thead tr{background:#3730a3}
+    .sum-table thead th{
+      padding:13px 18px;text-align:left;font-size:11px;font-weight:700;
+      text-transform:uppercase;letter-spacing:.7px;color:#fff;white-space:nowrap;
+    }
+    .sum-table thead th:not(:first-child){text-align:center}
+    .sum-table tbody tr{border-bottom:1px solid #f0f0f0;transition:background .12s;cursor:pointer}
+    .sum-table tbody tr:hover{background:#f5f3ff}
+    .sum-table tbody tr:last-child{border-bottom:none}
+    .sum-table td{padding:14px 18px;vertical-align:middle}
+    .sum-table td:not(:first-child){text-align:center;font-family:'Syne',sans-serif;font-weight:700;font-size:15px}
+    .emp-link{color:#3730a3;font-weight:600;font-size:13.5px;text-decoration:none}
+    .emp-link:hover{text-decoration:underline}
+    .emp-sub{font-size:11px;color:var(--muted);margin-top:2px}
+    .num-present{color:#16a34a}
+    .num-absent{color:#dc2626}
+    .num-total{color:#1e3a5f}
+    .num-zero{color:#94a3b8}
+
+    /* ── DETAIL TABLE ── */
+    table.detail{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
+    table.detail thead th{background:#fafaf8;padding:10px 13px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+    table.detail thead th.gi{background:#f0fdf4;color:#15803d}
+    table.detail thead th.go{background:#eff6ff;color:#1d4ed8}
+    table.detail tbody tr{border-bottom:1px solid #f5f0e8;transition:background .1s}
+    table.detail tbody tr:hover{background:#fafaf8}
+    table.detail tbody tr:last-child{border-bottom:none}
+    table.detail td{padding:12px 13px;vertical-align:middle}
+    .emp-id{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;background:var(--cream);color:var(--navy);padding:3px 8px;border-radius:6px}
+    .emp-name{font-weight:500;font-size:13px;color:var(--ink)}
+    .emp-email{font-size:11px;color:var(--muted)}
+    .tval{font-weight:600;font-size:12.5px}
+    .tv-in{color:#15803d}.tv-out{color:#1d4ed8}
+    .loc{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px;color:var(--muted)}
+    .map-a{color:#3b82f6;font-size:11px;text-decoration:none;font-weight:500}
+    .map-a:hover{text-decoration:underline}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+    .b-full{background:#dcfce7;color:#15803d}
     .b-half{background:#fef9c3;color:#854d0e}
     .b-short{background:#fee2e2;color:#b91c1c}
     .b-pending{background:#e0e7ff;color:#4338ca}
-    .b-none{background:var(--g100);color:var(--g400)}
-    .b-full,.b-half,.b-short,.b-pending,.b-none{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700}
+    .b-none{background:var(--cream);color:var(--muted)}
 
-    .emp-col{font-weight:600;color:var(--navy);font-size:12px}
-    .time-val{font-weight:700;font-size:12.5px}
-    .loc-val{color:var(--g600);font-size:11.5px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .map-a{color:#3b82f6;font-size:11px;text-decoration:none;font-weight:500}
-    .map-a:hover{text-decoration:underline}
-    .sep{color:var(--g200);padding:0 2px}
+    .empty{text-align:center;padding:60px;color:var(--muted)}
+    .empty .ei{font-size:42px;margin-bottom:12px}
+    .err-box{background:#fff0ee;color:#c94a2b;padding:12px 18px;border-radius:10px;margin-bottom:18px;font-size:13px;border-left:4px solid var(--rust)}
+    .section-label{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;padding-left:2px}
 
-    .empty{text-align:center;padding:50px;color:var(--g400)}
-    .empty .ei{font-size:38px;margin-bottom:10px}
-    .err-box{background:#fee2e2;color:#b91c1c;padding:12px 18px;border-radius:10px;margin-bottom:18px;font-size:13px;border-left:5px solid #b91c1c}
-
-    /* Responsive */
-    @media(max-width:740px){
-      header{padding:0 16px;height:auto;min-height:70px;flex-wrap:wrap;gap:8px;padding:10px 16px}
-      .h-logo{flex:1}
-      .logo-text-group .brand-name{font-size:18px}
-      .h-badge{font-size:9px;padding:3px 8px}
-      .h-right{gap:8px}
-      .h-user{font-size:12px;padding:4px 10px}
-      .btn-logout{padding:5px 12px;font-size:12px}
+    @media(max-width:768px){
       main{padding:16px 12px}
-      .stats{gap:10px}
-      .scard{padding:12px 16px}
+      .stats{grid-template-columns:1fr 1fr;gap:10px}
       .snum{font-size:24px}
-      .fcard{padding:16px}
-      .frow .fg input{min-width:120px}
-      .thead-bar{flex-direction:column;align-items:stretch}
+      .tbar{flex-direction:column;align-items:stretch}
       .btn-export{justify-content:center}
-    }
-
-    @media(max-width:480px){
-      .stats{grid-template-columns:1fr 1fr}
-      .h-logo-img{width:38px;height:38px}
-      .brand-name{font-size:16px}
-      .quick .qbtn{font-size:11px;padding:4px 10px}
-      .fg input{font-size:12px}
-      td,th{font-size:11px;padding:8px 8px}
-      .loc-val{max-width:100px}
+      .frow .fg input{min-width:120px}
+      .h-nav{margin-left:0}
     }
   </style>
 </head>
 <body>
 <header>
-  <div class="h-logo">
-    <!-- IED Logo: High visibility, left side top, robust fallback -->
-    <img src="/images/IED_LOGO.jpg" alt="IED Logo" class="h-logo-img" onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%232d6a4f\'/%3E%3Ctext x=\'50\' y=\'67\' font-size=\'42\' text-anchor=\'middle\' fill=\'white\' font-weight=\'bold\'%3EIED%3C/text%3E%3C/svg%3E'; this.style.background='#2d6a4f'; this.style.objectFit='cover';" />
-    <div class="logo-text-group">
-      <span class="brand-name">IED Attendance</span>
-      <span class="h-badge">HR Panel</span>
-    </div>
+  <div class="h-left">
+    <img src="/images/IED_LOGO.jpg" alt="IED" class="h-logo" onerror="this.style.display='none'"/>
+    <div class="h-brand">IED <span>HRMS</span></div>
+    <nav class="h-nav">
+      <a href="/hr/dashboard" class="active">📊 Attendance</a>
+      <a href="/hr/employees">👥 Employees</a>
+    </nav>
   </div>
   <div class="h-right">
     <span class="h-user">👤 <%= hr.name %></span>
-    <a href="/hr/logout" class="btn-logout">Logout</a>
+    <a href="/hr/logout" class="btn-out">Logout</a>
   </div>
 </header>
 
 <main>
-  <% if(typeof dbError!=='undefined'&&dbError){ %>
+  <% if(typeof dbError!=='undefined' && dbError){ %>
     <div class="err-box">⚠️ DB Error: <%= dbError %></div>
   <% } %>
 
-  <!-- Stats Cards -->
+  <!-- Stat Cards -->
   <div class="stats">
     <div class="scard">
-      <div class="sicon" style="background:#dcfce7">📅</div>
-      <div><div class="snum"><%= summary.total_days %></div><div class="slabel">Total Records</div></div>
+      <div class="sicon" style="background:#f0fdf4">📋</div>
+      <div><div class="snum"><%= summary.total_records %></div><div class="slabel">Total Records</div></div>
     </div>
     <div class="scard">
       <div class="sicon" style="background:#dcfce7">✅</div>
@@ -174,176 +168,102 @@
 
   <!-- Filters -->
   <div class="fcard">
-    <div class="ftitle">🔍 Filter Records</div>
+    <div class="fhead">🔍 Filter Records</div>
     <div class="quick">
-      <button class="qbtn" onclick="setToday()">Today</button>
-      <button class="qbtn" onclick="setYesterday()">Yesterday</button>
-      <button class="qbtn" onclick="setThisWeek()">This Week</button>
-      <button class="qbtn" onclick="setThisMonth()">This Month</button>
-      <button class="qbtn" onclick="setLastMonth()">Last Month</button>
+      <button class="qbtn" type="button" onclick="setToday()">Today</button>
+      <button class="qbtn" type="button" onclick="setYesterday()">Yesterday</button>
+      <button class="qbtn" type="button" onclick="setThisWeek()">This Week</button>
+      <button class="qbtn" type="button" onclick="setThisMonth()">This Month</button>
+      <button class="qbtn" type="button" onclick="setLastMonth()">Last Month</button>
     </div>
-    <form method="GET" action="/hr/dashboard">
+    <form method="GET" action="/hr/dashboard" id="filterForm">
       <div class="frow">
-        <div class="fg"><label>From Date</label><input type="date" name="date_from" id="d1" value="<%= filters.date_from %>"/></div>
-        <div class="fg"><label>To Date</label><input type="date" name="date_to" id="d2" value="<%= filters.date_to %>"/></div>
-        <div class="fg"><label>Employee Email</label><input type="text" name="emp_email" placeholder="Search email..." value="<%= filters.emp_email %>"/></div>
-        <button type="submit" class="btn-apply">Apply</button>
+        <div class="fg"><label>From Date</label><input type="date" name="date_from" id="d1" value="<%= filters.date_from %>" onchange="submitForm()"/></div>
+        <div class="fg"><label>To Date</label><input type="date" name="date_to" id="d2" value="<%= filters.date_to %>" onchange="submitForm()"/></div>
+        <div class="fg"><label>Emp ID</label><input type="text" name="emp_id" placeholder="IED_01…" value="<%= filters.emp_id %>" onchange="submitForm()"/></div>
+        <div class="fg"><label>Email</label><input type="text" name="emp_email" placeholder="Search email…" value="<%= filters.emp_email %>" onchange="submitForm()"/></div>
         <a href="/hr/dashboard" class="btn-reset">Reset</a>
       </div>
     </form>
   </div>
 
-  <!-- Table Section -->
+  <!-- ═══════════════════════════════════════════════════════
+       ATTENDANCE REPORT (clean & simplified layout)
+       ═══════════════════════════════════════════════════════ -->
+  <% if(typeof employeeSummary !== 'undefined' && employeeSummary && employeeSummary.length > 0){ %>
+  <div class="section-label">Attendance Report
+    <% if(typeof reportRange !== 'undefined' && reportRange){ %>
+      — <%= reportRange.startKey %> to <%= reportRange.endKey %>
+    <% } %>
+  </div>
   <div class="tcard">
-    <div class="thead-bar">
-      <div>
-        <div class="ttitle">Attendance Register</div>
-        <div class="tcount"><%= records.length %> records — 1 row per employee per day</div>
+    <div class="tbar">
+      <div class="tbar-left">
+        <div class="ttitle">All Employees — Attendance Report</div>
+        <div class="tsub"><%= employeeSummary.length %> employee(s)
+          <% if(typeof reportRange !== 'undefined' && reportRange){ %> · <%= reportRange.totalDays %> working days in period<% } %>
+        </div>
       </div>
-      <a href="/hr/export?date_from=<%= filters.date_from %>&date_to=<%= filters.date_to %>&emp_email=<%= filters.emp_email %>" class="btn-export">
-        📥 Export Excel
-      </a>
+      <div class="tbar-right">
+        <a href="/hr/export?date_from=<%= filters.date_from %>&date_to=<%= filters.date_to %>&emp_email=<%= filters.emp_email %>&emp_id=<%= filters.emp_id %>" class="btn-export">
+          📥 Export Excel
+        </a>
+      </div>
     </div>
-
     <div class="tscroll">
-      <% if(!records.length){ %>
-        <div class="empty"><div class="ei">📭</div><p>No records found for selected filters.</p></div>
-      <% } else { %>
-      <table>
+      <table class="sum-table">
         <thead>
           <tr>
-            <th>#</th>
-            <th>Employee Email</th>
-            <th>Date</th>
-            <th>Month</th>
-            <th class="group-in">Punch IN</th>
-            <th class="group-in">In Location</th>
-            <th class="group-in">In Map</th>
-            <th class="group-out">Punch OUT</th>
-            <th class="group-out">Out Location</th>
-            <th class="group-out">Out Map</th>
-            <th>Hours</th>
-            <th>Status</th>
+            <th>#&nbsp;&nbsp;Employee Name</th>
+            <th style="text-align:center">Employee ID</th>
+            <th style="text-align:center">Total Days</th>
+            <th style="text-align:center">Present</th>
+            <th style="text-align:center">Absent</th>
           </tr>
         </thead>
         <tbody>
-          <% records.forEach((r,i)=>{ %>
-          <%
-            const inT  = r.punch_in_time || null;
-            const outT = r.punch_out_time || null;
-            const hrs  = r.hours_worked   ? parseFloat(r.hours_worked)  : null;
-            let dayStatus = '—', badgeClass = 'b-none';
-            if(hrs !== null){
-              if(hrs>=8){dayStatus='Full Day';badgeClass='b-full';}
-              else if(hrs>=4){dayStatus='Half Day';badgeClass='b-half';}
-              else{dayStatus='Short';badgeClass='b-short';}
-            } else if(inT){dayStatus='Pending OUT';badgeClass='b-pending';}
+          <% employeeSummary.forEach((row, idx) => {
+            const isAbsent0 = row.absent === 0;
+            const isPresent0 = row.present === 0;
           %>
           <tr>
-            <td style="color:var(--g400); font-weight:500;"><%= i+1 %></td>
-            <td class="emp-col"><%= r.emp_email %></td>
-            <td style="white-space:nowrap"><%= formatIstDate(r.date) %></td>
-            <td style="color:var(--g600); font-size:11px; font-weight:500;"><%= r.month_year||'—' %></td>
-
-            <!-- IN column -->
             <td>
-              <% if(inT){ %>
-                <span style="color:#15803d" class="time-val">🟢 <%= formatIstTime(inT) %></span>
-              <% }else{ %><span style="color:var(--g400)">—</span><% } %>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="width:36px;height:36px;border-radius:10px;background:#3730a3;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;flex-shrink:0">
+                  <%= (row.emp_name||'?')[0].toUpperCase() %>
+                </div>
+                <div>
+                  <div style="font-weight:600;font-size:13.5px;color:var(--ink)"><%= row.emp_name %></div>
+                  <div class="emp-sub"><%= row.email %></div>
+                </div>
+              </div>
             </td>
-            <td class="loc-val" title="<%= r.in_location||'' %>"><%= r.in_location ? (r.in_location.length>35 ? r.in_location.substring(0,32)+'…' : r.in_location) : '—' %></td>
-            <td>
-              <% if(r.in_map_link){ %>
-                <a href="<%= r.in_map_link %>" target="_blank" rel="noopener noreferrer" class="map-a">📍 Map</a>
-              <% }else{ %>—<% } %>
-            </td>
-
-            <!-- OUT column -->
-            <td>
-              <% if(outT){ %>
-                <span style="color:#1d4ed8" class="time-val">🔵 <%= formatIstTime(outT) %></span>
-              <% }else{ %><span style="color:var(--g400)">—</span><% } %>
-            </td>
-            <td class="loc-val" title="<%= r.out_location||'' %>"><%= r.out_location ? (r.out_location.length>35 ? r.out_location.substring(0,32)+'…' : r.out_location) : '—' %></td>
-            <td>
-              <% if(r.out_map_link){ %>
-                <a href="<%= r.out_map_link %>" target="_blank" rel="noopener noreferrer" class="map-a">📍 Map</a>
-              <% }else{ %>—<% } %>
-            </td>
-
-            <td style="font-weight:700;color:var(--navy)">
-              <%= hrs !== null ? hrs.toFixed(2)+' h' : '—' %>
-            </td>
-            <td><span class="<%= badgeClass %>"><%= dayStatus %></span></td>
+            <td style="text-align:center"><span class="emp-id-badge" style="font-family:'Syne',sans-serif;font-size:11.5px;font-weight:700;background:var(--cream);color:var(--navy);padding:4px 10px;border-radius:8px;white-space:nowrap"><%= row.emp_id %></span></td>
+            <td style="text-align:center"><span class="num-total"><%= row.total_days %></span></td>
+            <td style="text-align:center"><span class="<%= isPresent0 ? 'num-zero' : 'num-present' %>"><%= row.present %></span></td>
+            <td style="text-align:center"><span class="<%= isAbsent0 ? 'num-zero' : 'num-absent' %>"><%= row.absent %></span></td>
           </tr>
           <% }) %>
         </tbody>
-        </table>
-      <% } %>
+      </table>
     </div>
   </div>
-</main> 
-
-<%
-  function formatIstDate(value) {
-    if (!value) return '—';
-    const text = String(value);
-    const datePart = text.includes('T') ? text.split('T')[0] : text.split(' ')[0];
-    const [year, month, day] = datePart.split('-');
-    if (!year || !month || !day) return text;
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${day} ${months[parseInt(month, 10) - 1] || month} ${year}`;
-  }
-
-  function formatIstTime(value) {
-    if (!value) return '—';
-    const text = String(value);
-    const timePart = text.includes('T') ? text.split('T')[1] : text.split(' ')[1] || text;
-    return timePart.slice(0, 5);
-  }
-%>
+  <% } %>
+</main>
 
 <script>
-  // DOM elements for date filters
   const d1=document.getElementById('d1'), d2=document.getElementById('d2');
+  const submitForm = () => document.getElementById('filterForm').submit();
   const fmt=d=>{
-    const parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
-    const map={};
-    parts.forEach(p=>{ if(p.type!=='literal') map[p.type]=p.value; });
-    return `${map.year}-${map.month}-${map.day}`;
+    const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+    const m={};p.forEach(x=>{if(x.type!=='literal')m[x.type]=x.value;});
+    return `${m.year}-${m.month}-${m.day}`;
   };
-  
-  function setToday(){
-    const t=new Date();
-    d1.value=d2.value=fmt(t);
-    // auto-submit via form? Not auto, but user can hit apply; we keep original UX
-    // optionally highlight, but no forced submit to respect interface.
-  }
-  function setYesterday(){
-    const t=new Date();t.setDate(t.getDate()-1);
-    d1.value=d2.value=fmt(t);
-  }
-  function setThisWeek(){
-    const t=new Date(),day=t.getDay();
-    const mon=new Date(t);
-    mon.setDate(t.getDate()-(day===0?6:day-1));
-    d1.value=fmt(mon);
-    d2.value=fmt(t);
-  }
-  function setThisMonth(){
-    const t=new Date();
-    d1.value=fmt(new Date(t.getFullYear(),t.getMonth(),1));
-    d2.value=fmt(t);
-  }
-  function setLastMonth(){
-    const t=new Date();
-    d1.value=fmt(new Date(t.getFullYear(),t.getMonth()-1,1));
-    d2.value=fmt(new Date(t.getFullYear(),t.getMonth(),0));
-  }
-  // Additional quality: if any quick button used, we also optionally auto-submit? 
-  // But keeping original design: user clicks apply after. so no submit auto.
-  // but for better UX, if desired we could add, but specs: "design change mt kro" (no design change)
-  // So only date pickers values update.
+  function setToday(){const t=new Date();d1.value=d2.value=fmt(t); submitForm();}
+  function setYesterday(){const t=new Date();t.setDate(t.getDate()-1);d1.value=d2.value=fmt(t); submitForm();}
+  function setThisWeek(){const t=new Date(),dy=t.getDay(),s=new Date(t);s.setDate(t.getDate()-(dy===0?6:dy-1));d1.value=fmt(s);d2.value=fmt(t); submitForm();}
+  function setThisMonth(){const t=new Date();d1.value=fmt(new Date(t.getFullYear(),t.getMonth(),1));d2.value=fmt(t); submitForm();}
+  function setLastMonth(){const t=new Date();d1.value=fmt(new Date(t.getFullYear(),t.getMonth()-1,1));d2.value=fmt(new Date(t.getFullYear(),t.getMonth(),0)); submitForm();}
 </script>
 </body>
 </html>

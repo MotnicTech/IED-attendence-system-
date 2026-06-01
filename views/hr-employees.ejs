@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Employees — IED HRMS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--ink:#0f1923;--cream:#f5f0e8;--rust:#c94a2b;--gold:#d4a843;--green:#2d6a4f;
+          --card:#fff;--border:#e0d9ce;--muted:#7a7166;--navy:#1e3a5f;--shadow:0 4px 24px rgba(0,0,0,.07)}
+    body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);min-height:100vh}
+    header{background:var(--ink);height:64px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 16px rgba(0,0,0,.2);position:sticky;top:0;z-index:100}
+    .h-left{display:flex;align-items:center;gap:14px}
+    .h-logo{width:38px;height:38px;object-fit:contain;border-radius:10px;background:rgba(255,255,255,.1);padding:3px}
+    .h-brand{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px}
+    .h-brand span{color:var(--gold)}
+    .h-nav{display:flex;gap:4px;margin-left:24px}
+    .h-nav a{color:rgba(255,255,255,.65);text-decoration:none;font-size:13px;font-weight:500;padding:6px 14px;border-radius:8px;transition:all .2s}
+    .h-nav a:hover,.h-nav a.active{background:rgba(255,255,255,.12);color:#fff}
+    .h-right{display:flex;align-items:center;gap:10px}
+    .h-user{font-size:12.5px;color:rgba(255,255,255,.7);background:rgba(255,255,255,.08);padding:5px 12px;border-radius:30px}
+    .btn-lo{padding:6px 14px;background:var(--rust);color:#fff;border:none;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:none;font-family:'DM Sans',sans-serif}
+    main{max-width:1300px;margin:0 auto;padding:24px 20px}
+    .page-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+    .page-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--ink)}
+    .page-sub{font-size:13px;color:var(--muted);margin-top:2px}
+
+    /* Add Employee Modal / Card */
+    .add-card{background:var(--card);border-radius:16px;padding:26px 28px;box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:22px}
+    .add-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;margin-bottom:18px;color:var(--ink)}
+    .form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+    .fg{display:flex;flex-direction:column;gap:4px}
+    .fg label{font-size:10.5px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .fg input{padding:10px 13px;border:1.5px solid var(--border);border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);background:#fafaf8;outline:none;transition:border-color .2s}
+    .fg input:focus{border-color:var(--rust);box-shadow:0 0 0 3px rgba(201,74,43,.08)}
+    .fg small{font-size:11px;color:var(--muted)}
+    .form-actions{margin-top:16px;display:flex;gap:10px;align-items:center}
+    .btn-add{padding:11px 24px;background:var(--rust);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;font-family:'Syne',sans-serif;cursor:pointer;transition:all .2s}
+    .btn-add:hover{background:#b03d22;transform:translateY(-1px)}
+
+    /* Message box */
+    .msg-box{border-radius:12px;padding:14px 18px;font-size:13.5px;margin-bottom:20px;line-height:1.5}
+    .msg-success{background:#f0fdf4;border:1.5px solid #86efac;color:#15803d}
+    .msg-error{background:#fff0ee;border:1.5px solid #fca5a5;color:var(--rust)}
+    .new-creds{margin-top:10px;background:#dcfce7;border-radius:8px;padding:12px 14px;font-size:13px}
+    .new-creds strong{font-family:'Syne',sans-serif}
+
+    /* Employee table */
+    .tcard{background:var(--card);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;border:1px solid var(--border)}
+    .tbar{display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px}
+    .ttitle{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:var(--ink)}
+    .tsub{font-size:11.5px;color:var(--muted);margin-top:2px}
+    .tscroll{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:13px;min-width:750px}
+    thead th{background:#fafaf8;padding:10px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);border-bottom:1px solid var(--border)}
+    tbody tr{border-bottom:1px solid #f5f0e8;transition:background .1s}
+    tbody tr:hover{background:#fafaf8}
+    tbody tr:last-child{border-bottom:none}
+    td{padding:14px;vertical-align:middle}
+    .emp-id-badge{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;background:var(--cream);color:var(--navy);padding:4px 10px;border-radius:8px;white-space:nowrap}
+    .emp-name{font-weight:500;color:var(--ink)}
+    .emp-email{font-size:11.5px;color:var(--muted)}
+    .dept-badge{display:inline-block;background:#eff6ff;color:#1d4ed8;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500}
+    .status-on{display:inline-block;background:#dcfce7;color:#15803d;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+    .status-off{background:#fee2e2;color:#b91c1c}
+    .actions{display:flex;gap:6px;flex-wrap:wrap}
+    .act-btn{padding:5px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:11.5px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);transition:all .2s}
+    .act-btn:hover{border-color:var(--rust);color:var(--rust)}
+    .act-del{border-color:#fca5a5;color:#b91c1c;background:#fff0ee}
+    .act-del:hover{background:#fee2e2;border-color:#b91c1c}
+    .empty{text-align:center;padding:50px;color:var(--muted)}
+    .empty .ei{font-size:40px;margin-bottom:12px}
+
+    @media(max-width:768px){
+      header{padding:0 16px;height:auto;min-height:60px;flex-wrap:wrap;gap:8px;padding:10px 16px}
+      .h-nav{display:none}
+      main{padding:16px 12px}
+      .form-grid{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:480px){
+      .form-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="h-left">
+    <img src="/images/IED_LOGO.jpg" alt="IED" class="h-logo" onerror="this.style.display='none'"/>
+    <div class="h-brand">IED <span>HRMS</span></div>
+    <nav class="h-nav">
+      <a href="/hr/dashboard">📊 Attendance</a>
+      <a href="/hr/employees" class="active">👥 Employees</a>
+    </nav>
+  </div>
+  <div class="h-right">
+    <span class="h-user">👤 <%= hr.name %></span>
+    <a href="/hr/logout" class="btn-lo">Logout</a>
+  </div>
+</header>
+
+<main>
+  <div class="page-head">
+    <div>
+      <div class="page-title">Employee Management</div>
+      <div class="page-sub">Add employees, view EMP IDs & manage PINs</div>
+    </div>
+  </div>
+
+  <!-- Alerts -->
+  <% if(typeof error !== 'undefined' && error){ %>
+    <div class="msg-box msg-error">⚠️ <%= error %></div>
+  <% } %>
+  <% if(typeof message !== 'undefined' && message){ %>
+    <div class="msg-box msg-success">
+      <%= message %>
+      <% if(typeof newEmp !== 'undefined' && newEmp){ %>
+      <div class="new-creds">
+        <strong>Share with employee securely:</strong><br/>
+        Employee ID: <strong><%= newEmp.emp_id %></strong> &nbsp;|&nbsp;
+        Name: <strong><%= newEmp.name %></strong> &nbsp;|&nbsp;
+        Email: <strong><%= newEmp.email %></strong><br/>
+        Login PIN: <strong style="font-size:18px;letter-spacing:3px"><%= newEmp.pin %></strong><br/>
+        <small>They can login at: <strong>/emp/login</strong></small>
+      </div>
+      <% } %>
+    </div>
+  <% } %>
+
+  <!-- Add Employee Form -->
+  <div class="add-card">
+    <div class="add-title">➕ Add New Employee</div>
+    <form method="POST" action="/hr/employees/add">
+      <div class="form-grid">
+        <div class="fg">
+          <label>Full Name *</label>
+          <input type="text" name="name" required placeholder="Rajesh Kumar"/>
+        </div>
+        <div class="fg">
+          <label>Email Address *</label>
+          <input type="email" name="email" required placeholder="raj@company.com"/>
+        </div>
+        <div class="fg">
+          <label>Phone Number</label>
+          <input type="tel" name="phone" placeholder="+91 98765 43210"/>
+        </div>
+        <div class="fg">
+          <label>Department</label>
+          <input type="text" name="department" placeholder="Engineering"/>
+        </div>
+        <div class="fg">
+          <label>Designation</label>
+          <input type="text" name="designation" placeholder="Software Engineer"/>
+        </div>
+        
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn-add">Add Employee & Generate ID</button>
+        <span style="font-size:12px;color:var(--muted)">EMP ID will be auto-generated (IED_01, IED_02, ...)</span>
+      </div>
+    </form>
+  </div>
+
+  <!-- Employee Table -->
+  <div class="tcard">
+    <div class="tbar">
+      <div>
+        <div class="ttitle">All Employees</div>
+        <div class="tsub"><%= employees.length %> employee(s) registered</div>
+      </div>
+    </div>
+    <div class="tscroll">
+      <% if(!employees.length){ %>
+        <div class="empty"><div class="ei">👤</div><p>No employees added yet.</p></div>
+      <% } else { %>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Emp ID</th>
+            <th>Name &amp; Email</th>
+            <th>Phone</th>
+            <th>Department</th>
+            <th>Designation</th>
+            <th>Status</th>
+            <th>Joined</th>
+            <th>PIN</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% employees.forEach((e,i) => { %>
+          <tr>
+            <td style="color:var(--muted)"><%= i+1 %></td>
+            <td><span class="emp-id-badge"><%= e.emp_id %></span></td>
+            <td>
+              <div class="emp-name"><%= e.name %></div>
+              <div class="emp-email"><%= e.email %></div>
+            </td>
+            <td style="font-size:12.5px;color:var(--muted)"><%= e.phone||'—' %></td>
+            <td><% if(e.department){ %><span class="dept-badge"><%= e.department %></span><% }else{ %>—<% } %></td>
+            <td style="font-size:12.5px;color:var(--muted)"><%= e.designation||'—' %></td>
+            <td><span class="status-on <%= !e.is_active ? 'status-off' : '' %>"><%= e.is_active ? '● Active' : '○ Inactive' %></span></td>
+            <td style="font-size:12px;color:var(--muted)"><%= e.joined_date ? String(e.joined_date).split('T')[0] : '—' %></td>
+            <td><code style="font-family:'Syne', monospace; font-weight:700; font-size:13.5px; background:var(--cream); padding:3px 8px; border-radius:6px; color:var(--rust)"><%= e.pin || '—' %></code></td>
+            <td>
+              <div class="actions">
+                <!-- Reset PIN -->
+                <form method="POST" action="/hr/employees/reset-pin" style="display:inline">
+                  <input type="hidden" name="emp_id" value="<%= e.emp_id %>"/>
+                  <button type="submit" class="act-btn" onclick="return confirm('Reset PIN for <%= e.name %>?')">🔑 Reset PIN</button>
+                </form>
+                <!-- Toggle Active -->
+                <form method="POST" action="/hr/employees/toggle" style="display:inline">
+                  <input type="hidden" name="emp_id" value="<%= e.emp_id %>"/>
+                  <button type="submit" class="act-btn"><%= e.is_active ? '⏸ Deactivate' : '▶ Activate' %></button>
+                </form>
+                <!-- Delete -->
+                <form method="POST" action="/hr/employees/delete" style="display:inline">
+                  <input type="hidden" name="emp_id" value="<%= e.emp_id %>"/>
+                  <button type="submit" class="act-btn act-del" onclick="return confirm('DELETE <%= e.name %>? This cannot be undone.')">🗑 Delete</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <% } %>
+    </div>
+  </div>
+</main>
+</body>
+</html>

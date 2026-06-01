@@ -17,9 +17,9 @@
         <span class="logo-text">IED Attendance</span>
       </div>
       <div class="header-actions">
-        <div class="header-email" id="headerEmail">Sign in with Google</div>
-        <a href="/auth/google" class="auth-btn auth-btn-primary" id="authBtn">Google Sign-In</a>
-        <a href="/logout" class="auth-btn auth-btn-ghost" id="logoutBtn" style="display:none">Logout</a>
+        <div class="header-email" id="headerEmail">Employee portal</div>
+        <a href="/emp/login" class="auth-btn auth-btn-primary" id="authBtn">Employee Login</a>
+        <a href="/hr/login" class="auth-btn auth-btn-ghost" id="logoutBtn">HR Login</a>
       </div>
     </header>
 
@@ -29,10 +29,10 @@
 
         <div class="auth-panel" id="authPrompt">
           <div>
-            <div class="auth-title">Sign in with Google to continue</div>
-            <div class="auth-sub">Manual email entry has been removed. Punch IN and Punch OUT will use your Google account automatically.</div>
+            <div class="auth-title">Sign in with your Employee ID to continue</div>
+            <div class="auth-sub">Use the employee portal to punch IN and punch OUT with your HR-issued ID and PIN.</div>
           </div>
-          <a href="/auth/google" class="auth-btn auth-btn-primary">Continue with Google</a>
+          <a href="/emp/login" class="auth-btn auth-btn-primary">Open Employee Login</a>
         </div>
 
         <!-- Status Banner -->
@@ -174,8 +174,8 @@
       document.getElementById('authPrompt').style.display = 'flex';
       document.getElementById('authBtn').style.display = 'inline-flex';
       document.getElementById('logoutBtn').style.display = 'none';
-      document.getElementById('headerEmail').textContent = 'Sign in with Google';
-      setStatus('Sign in with Google to mark attendance', 'loading');
+      document.getElementById('headerEmail').textContent = 'Employee portal';
+      setStatus('Open Employee Login to mark attendance', 'loading');
       syncButtonState();
     }
 
@@ -298,7 +298,7 @@
 
     // ─── PUNCH ────────────────────────────────────────────────────────────────
     async function punch(status) {
-      if (!currentUser || !userEmail) return showMsg('Please sign in with Google first', 'error');
+      if (!currentUser || !userEmail) return showMsg('Please sign in with your Employee ID first', 'error');
       if (!userLat) {
         showMsg('Location not yet available. Please wait...', 'error');
         startLocation();
