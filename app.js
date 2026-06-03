@@ -13,6 +13,7 @@ const { requireHR,
 const hrRouter = require('./routes/hr');       // routes/hr.js
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 4000;
 
 // ── VIEW ENGINE ───────────────────────────────────────────────────────────────
