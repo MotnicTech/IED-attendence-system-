@@ -286,7 +286,7 @@
         </thead>
         <tbody>
           <% dailyGrid.forEach((row, i) => {
-            const hrs = row.hours_worked;
+            const hrs = row.hours_worked !== null && row.hours_worked !== undefined ? parseFloat(row.hours_worked) : null;
             const inT = row.punch_in_time;
             const outT = row.punch_out_time;
             
@@ -365,7 +365,7 @@
 
             <!-- Hours Worked -->
             <td style="font-family:'Syne',sans-serif;font-weight:700;font-size:12.5px;color:var(--navy)">
-              <%= hrs !== null ? hrs.toFixed(2) + ' h' : '—' %>
+              <%= (hrs !== null && !isNaN(hrs)) ? hrs.toFixed(2) + ' h' : '—' %>
             </td>
             
             <!-- Status Badge -->

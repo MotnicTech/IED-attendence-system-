@@ -344,6 +344,74 @@ router.get('/dashboard', requireHR, async (req, res) => {
       params
     );
 
+    // Build the Daily Grid (All active employees mapped daily)
+    const start = parseDateKey(reportRange.startKey);
+    const end = parseDateKey(reportRange.endKey);
+    const dates = [];
+    if (start && end) {
+      const cursor = new Date(start);
+      while (cursor <= end) {
+        dates.push(formatDateKey(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+    dates.reverse(); // latest date first
+
+    const empParams = [];
+    let empWhere = 'WHERE is_active = TRUE';
+    if (emp_email) {
+      empParams.push(`%${emp_email}%`);
+      empWhere += ` AND email ILIKE $${empParams.length}`;
+    }
+    if (emp_id) {
+      empParams.push(`%${emp_id}%`);
+      empWhere += ` AND emp_id ILIKE $${empParams.length}`;
+    }
+    const targetEmployees = await pool.query(
+      `SELECT emp_id, name, email FROM employees ${empWhere} ORDER BY name`,
+      empParams
+    );
+
+    const logsMap = new Map();
+    for (const r of records.rows) {
+      const dKey = r.date ? (r.date instanceof Date ? formatDateKey(r.date) : String(r.date).split('T')[0].split(' ')[0]) : '';
+      const eId = (r.emp_id || '').trim().toUpperCase();
+      const eEmail = (r.emp_email || '').trim().toLowerCase();
+      if (dKey && eId) logsMap.set(`${dKey}__id__${eId}`, r);
+      if (dKey && eEmail) logsMap.set(`${dKey}__email__${eEmail}`, r);
+    }
+
+    const dailyGrid = [];
+    for (const dKey of dates) {
+      const dateObj = parseDateKey(dKey);
+      const isSunday = dateObj && dateObj.getDay() === 0;
+
+      for (const emp of targetEmployees.rows) {
+        const eId = (emp.emp_id || '').trim().toUpperCase();
+        const eEmail = (emp.email || '').trim().toLowerCase();
+        
+        const log = logsMap.get(`${dKey}__id__${eId}`) || logsMap.get(`${dKey}__email__${eEmail}`);
+        if (log) {
+          dailyGrid.push(log);
+        } else {
+          dailyGrid.push({
+            date: dKey,
+            emp_id: emp.emp_id,
+            emp_name: emp.name,
+            email: emp.email,
+            status: isSunday ? 'Weekly Off' : 'Absent',
+            punch_in_time: null,
+            punch_out_time: null,
+            in_location: null,
+            in_map_link: null,
+            out_location: null,
+            out_map_link: null,
+            hours_worked: null
+          });
+        }
+      }
+    }
+
     // If a PIN was just generated via reset-pin->redirect, surface it once and clear
     const newPinInfo = req.session.newPinInfo || null;
     if (req.session.newPinInfo) delete req.session.newPinInfo;
@@ -352,6 +420,7 @@ router.get('/dashboard', requireHR, async (req, res) => {
       hr: req.session.hr,
       records: records.rows,
       employeeSummary,
+      dailyGrid,
       reportRange,
       summary: summary.rows[0],
       filters: { date_from: date_from || '', date_to: date_to || '', emp_email: emp_email || '', emp_id: emp_id || '' },
@@ -363,6 +432,7 @@ router.get('/dashboard', requireHR, async (req, res) => {
     res.render('hr-dashboard', {
       hr: req.session.hr, records: [],
       employeeSummary: [],
+      dailyGrid: [],
       reportRange,
       filters: { date_from: '', date_to: '', emp_email: '', emp_id: '' },
       summary: { total_records: 0, complete: 0, pending_out: 0, unique_employees: 0 },
