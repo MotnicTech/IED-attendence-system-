@@ -1,10 +1,10 @@
 // routes/hr.js — HR admin: login, dashboard, employee management, Excel export (SMTP Reloaded)
-const express  = require('express');
-const router   = express.Router();
-const bcrypt   = require('bcryptjs');
-const XLSX     = require('xlsx');
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');
+const XLSX = require('xlsx');
 const nodemailer = require('nodemailer');
-const path     = require('path');
+const path = require('path');
 const { pool } = require('../db');
 const { requireHR } = require('../middleware/auth');
 
@@ -13,25 +13,25 @@ const TIME_ZONE = process.env.APP_TIMEZONE || 'Asia/Kolkata';
 
 function getZonedParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: TIME_ZONE, year:'numeric', month:'2-digit', day:'2-digit',
-    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+    timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
   }).formatToParts(date);
   return parts.reduce((a, p) => { if (p.type !== 'literal') a[p.type] = p.value; return a; }, {});
 }
 
 function formatDateDMY(value) {
   if (!value) return '—';
-  const text     = String(value);
+  const text = String(value);
   const datePart = text.includes('T') ? text.split('T')[0] : text.split(' ')[0];
   const [year, month, day] = datePart.split('-');
   if (!year || !month || !day) return text;
-  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${day} ${months[parseInt(month,10)-1]||month} ${year}`;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${day} ${months[parseInt(month, 10) - 1] || month} ${year}`;
 }
 
 function formatTimeHHMM(value) {
   if (!value) return null;
-  const text     = String(value);
+  const text = String(value);
   const timePart = text.includes('T') ? text.split('T')[1] : (text.split(' ')[1] || text);
   return timePart.slice(0, 5);
 }
@@ -154,9 +154,9 @@ function generatePin(length = 6) {
 // Working days in a MM/YY month (exclude Sundays)
 function workingDaysInMonth(monthYear) {
   if (!monthYear || !monthYear.includes('/')) return 26;
-  const [mm, yy]   = monthYear.split('/');
-  const year        = parseInt('20' + yy, 10);
-  const month       = parseInt(mm, 10) - 1;
+  const [mm, yy] = monthYear.split('/');
+  const year = parseInt('20' + yy, 10);
+  const month = parseInt(mm, 10) - 1;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   let working = 0;
   for (let d = 1; d <= daysInMonth; d++) {
@@ -293,10 +293,10 @@ router.get('/dashboard', requireHR, async (req, res) => {
 
   const params = [];
   let where = 'WHERE 1=1';
-  if (date_from) { params.push(date_from);        where += ` AND a.date >= $${params.length}`; }
-  if (date_to)   { params.push(date_to);          where += ` AND a.date <= $${params.length}`; }
+  if (date_from) { params.push(date_from); where += ` AND a.date >= $${params.length}`; }
+  if (date_to) { params.push(date_to); where += ` AND a.date <= $${params.length}`; }
   if (emp_email) { params.push(`%${emp_email}%`); where += ` AND a.emp_email ILIKE $${params.length}`; }
-  if (emp_id)    { params.push(`%${emp_id}%`);    where += ` AND a.emp_id ILIKE $${params.length}`; }
+  if (emp_id) { params.push(`%${emp_id}%`); where += ` AND a.emp_id ILIKE $${params.length}`; }
 
   const reportRange = getReportRange(date_from, date_to);
 
@@ -330,69 +330,6 @@ router.get('/dashboard', requireHR, async (req, res) => {
 
     const employeeSummary = buildEmployeeSummary(records.rows, employees.rows, reportRange.totalDays);
 
-    // Generate all-employee daily attendance grid (who punched and who was absent)
-    const dailyGrid = [];
-    const start = parseDateKey(reportRange.startKey);
-    const end = parseDateKey(reportRange.endKey);
-
-    if (start && end && start <= end) {
-      const cursor = new Date(end);
-      cursor.setHours(0, 0, 0, 0);
-      const startNormalized = new Date(start);
-      startNormalized.setHours(0, 0, 0, 0);
-
-      while (cursor >= startNormalized) {
-        const dateStr = formatDateKey(cursor);
-        const dayOfWeek = cursor.getDay(); // 0 = Sunday
-        const isSunday = dayOfWeek === 0;
-
-        for (const emp of employees.rows) {
-          // Find log matching employee and date
-          const log = records.rows.find(r => {
-            const matchId = r.emp_id && emp.emp_id && r.emp_id === emp.emp_id;
-            const matchEmail = r.emp_email && emp.email && r.emp_email.toLowerCase() === emp.email.toLowerCase();
-            const logDateStr = r.date ? formatDateKey(parseDateKey(r.date)) : null;
-            return (matchId || matchEmail) && logDateStr === dateStr;
-          });
-
-          if (log) {
-            dailyGrid.push({
-              date: dateStr,
-              emp_id: emp.emp_id,
-              emp_name: emp.name,
-              email: emp.email,
-              punch_in_time: log.punch_in_time,
-              punch_out_time: log.punch_out_time,
-              in_location: log.in_location,
-              out_location: log.out_location,
-              in_map_link: log.in_map_link,
-              out_map_link: log.out_map_link,
-              hours_worked: log.hours_worked ? parseFloat(log.hours_worked) : null,
-              status: log.status,
-              is_sunday: isSunday
-            });
-          } else {
-            dailyGrid.push({
-              date: dateStr,
-              emp_id: emp.emp_id,
-              emp_name: emp.name,
-              email: emp.email,
-              punch_in_time: null,
-              punch_out_time: null,
-              in_location: null,
-              out_location: null,
-              in_map_link: null,
-              out_map_link: null,
-              hours_worked: null,
-              status: isSunday ? 'Weekly Off' : 'Absent',
-              is_sunday: isSunday
-            });
-          }
-        }
-        cursor.setDate(cursor.getDate() - 1);
-      }
-    }
-
     const summary = await pool.query(
       `SELECT
          COUNT(*)                                                                            AS total_records,
@@ -412,13 +349,12 @@ router.get('/dashboard', requireHR, async (req, res) => {
     if (req.session.newPinInfo) delete req.session.newPinInfo;
 
     res.render('hr-dashboard', {
-      hr:      req.session.hr,
+      hr: req.session.hr,
       records: records.rows,
       employeeSummary,
-      dailyGrid,
       reportRange,
       summary: summary.rows[0],
-      filters: { date_from: date_from||'', date_to: date_to||'', emp_email: emp_email||'', emp_id: emp_id||'' },
+      filters: { date_from: date_from || '', date_to: date_to || '', emp_email: emp_email || '', emp_id: emp_id || '' },
       newPinInfo,
       formatTimeHHMM,
       formatDateDMY
@@ -427,10 +363,9 @@ router.get('/dashboard', requireHR, async (req, res) => {
     res.render('hr-dashboard', {
       hr: req.session.hr, records: [],
       employeeSummary: [],
-      dailyGrid: [],
       reportRange,
-      filters: { date_from:'', date_to:'', emp_email:'', emp_id:'' },
-      summary: { total_records:0, complete:0, pending_out:0, unique_employees:0 },
+      filters: { date_from: '', date_to: '', emp_email: '', emp_id: '' },
+      summary: { total_records: 0, complete: 0, pending_out: 0, unique_employees: 0 },
       dbError: err.message, formatTimeHHMM, formatDateDMY
     });
   }
@@ -462,14 +397,14 @@ router.post('/employees/add', requireHR, async (req, res) => {
     const dup = await pool.query('SELECT id FROM employees WHERE email=$1', [emailLower]);
     if (dup.rows.length) return rerender(null, 'An employee with this email already exists.', null);
 
-    const emp_id  = await generateEmpId();
-    const pin     = (custom_pin && custom_pin.trim().length >= 4) ? custom_pin.trim() : generatePin(6);
+    const emp_id = await generateEmpId();
+    const pin = (custom_pin && custom_pin.trim().length >= 4) ? custom_pin.trim() : generatePin(6);
     const pinHash = await bcrypt.hash(pin, 10);
 
     await pool.query(
       `INSERT INTO employees (emp_id, name, email, phone, department, designation, pin_hash, pin)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-      [emp_id, name.trim(), emailLower, phone||null, department||null, designation||null, pinHash, pin]
+      [emp_id, name.trim(), emailLower, phone || null, department || null, designation || null, pinHash, pin]
     );
 
     const mailResult = await sendWelcomeEmail({ name: name.trim(), email: emailLower, emp_id, pin });
@@ -478,8 +413,6 @@ router.post('/employees/add', requireHR, async (req, res) => {
       successMsg += ` Credentials emailed to ${emailLower}.`;
     } else if (mailResult.error) {
       successMsg += ` (Welcome email failed: ${mailResult.error})`;
-    } else if (mailResult.message === 'SMTP settings not configured.') {
-      successMsg += ` (SMTP not configured, email skipped.)`;
     }
 
     return rerender(
@@ -496,7 +429,7 @@ router.post('/employees/add', requireHR, async (req, res) => {
 router.post('/employees/reset-pin', requireHR, async (req, res) => {
   const { emp_id } = req.body;
   try {
-    const newPin  = generatePin(6);
+    const newPin = generatePin(6);
     const pinHash = await bcrypt.hash(newPin, 10);
     await pool.query('UPDATE employees SET pin_hash=$1, pin=$2 WHERE emp_id=$3', [pinHash, newPin, emp_id]);
     // If caller requested a redirect (e.g. back to dashboard), stash the pin in session and redirect
@@ -546,10 +479,10 @@ router.get('/export', requireHR, async (req, res) => {
 
   const params = [];
   let where = 'WHERE 1=1';
-  if (date_from) { params.push(date_from);        where += ` AND a.date >= $${params.length}`; }
-  if (date_to)   { params.push(date_to);          where += ` AND a.date <= $${params.length}`; }
+  if (date_from) { params.push(date_from); where += ` AND a.date >= $${params.length}`; }
+  if (date_to) { params.push(date_to); where += ` AND a.date <= $${params.length}`; }
   if (emp_email) { params.push(`%${emp_email}%`); where += ` AND a.emp_email ILIKE $${params.length}`; }
-  if (emp_id)    { params.push(`%${emp_id}%`);    where += ` AND a.emp_id ILIKE $${params.length}`; }
+  if (emp_id) { params.push(`%${emp_id}%`); where += ` AND a.emp_id ILIKE $${params.length}`; }
   const reportRange = getReportRange(date_from, date_to);
 
   try {
@@ -581,15 +514,15 @@ router.get('/export', requireHR, async (req, res) => {
 
     // ── SHEET 1: Attendance Register ─────────────────────────────────────────
     const h1 = [
-      'Sr.','Emp ID','Employee Name','Email','Department','Designation',
-      'Date','Month','Day of Week',
-      'Punch IN','In Location','In Lat','In Lng','In Map Link',
-      'Punch OUT','Out Location','Out Lat','Out Lng','Out Map Link',
-      'Hours Worked','Day Status'
+      'Sr.', 'Emp ID', 'Employee Name', 'Email', 'Department', 'Designation',
+      'Date', 'Month', 'Day of Week',
+      'Punch IN', 'In Location', 'In Lat', 'In Lng', 'In Map Link',
+      'Punch OUT', 'Out Location', 'Out Lat', 'Out Lng', 'Out Map Link',
+      'Hours Worked', 'Day Status'
     ];
 
     const rows1 = result.rows.map((r, i) => {
-      const h   = r.hours_worked ? parseFloat(r.hours_worked) : null;
+      const h = r.hours_worked ? parseFloat(r.hours_worked) : null;
       const dateObj = r.date ? new Date(String(r.date).split('T')[0] + 'T00:00:00') : null;
       const dayName = dateObj ? dateObj.toLocaleDateString('en-IN', { weekday: 'long' }) : '';
       const dayStatus = h !== null
@@ -598,24 +531,24 @@ router.get('/export', requireHR, async (req, res) => {
 
       return [
         i + 1,
-        r.emp_id       || '—',
-        r.emp_name     || '—',
+        r.emp_id || '—',
+        r.emp_name || '—',
         r.emp_email,
-        r.department   || '—',
-        r.designation  || '—',
+        r.department || '—',
+        r.designation || '—',
         formatDateDMY(r.date),
-        r.month_year   || '',
+        r.month_year || '',
         dayName,
-        formatTimeHHMM(r.punch_in_time)  || '—',
-        r.in_location  || '—',
-        r.in_latitude  ? parseFloat(r.in_latitude)  : '',
+        formatTimeHHMM(r.punch_in_time) || '—',
+        r.in_location || '—',
+        r.in_latitude ? parseFloat(r.in_latitude) : '',
         r.in_longitude ? parseFloat(r.in_longitude) : '',
-        r.in_map_link  || '',
+        r.in_map_link || '',
         formatTimeHHMM(r.punch_out_time) || '—',
-        r.out_location  || '—',
-        r.out_latitude  ? parseFloat(r.out_latitude)  : '',
+        r.out_location || '—',
+        r.out_latitude ? parseFloat(r.out_latitude) : '',
         r.out_longitude ? parseFloat(r.out_longitude) : '',
-        r.out_map_link  || '',
+        r.out_map_link || '',
         h !== null ? `${h.toFixed(2)} hrs` : '—',
         dayStatus
       ];
@@ -623,25 +556,25 @@ router.get('/export', requireHR, async (req, res) => {
 
     const ws1 = XLSX.utils.aoa_to_sheet([h1, ...rows1]);
     ws1['!cols'] = [
-      {wch:5},{wch:15},{wch:22},{wch:30},{wch:16},{wch:18},
-      {wch:14},{wch:8},{wch:14},
-      {wch:12},{wch:20},{wch:10},{wch:10},{wch:42},
-      {wch:12},{wch:20},{wch:10},{wch:10},{wch:42},
-      {wch:14},{wch:16}
+      { wch: 5 }, { wch: 15 }, { wch: 22 }, { wch: 30 }, { wch: 16 }, { wch: 18 },
+      { wch: 14 }, { wch: 8 }, { wch: 14 },
+      { wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 42 },
+      { wch: 12 }, { wch: 20 }, { wch: 10 }, { wch: 10 }, { wch: 42 },
+      { wch: 14 }, { wch: 16 }
     ];
     XLSX.utils.book_append_sheet(wb, ws1, 'Attendance Register');
 
     // ── SHEET 2: Monthly Summary ─────────────────────────────────────────────
     const empMonthMap = {};
     result.rows.forEach(r => {
-      const key = `${r.emp_id||r.emp_email}__${r.month_year}`;
+      const key = `${r.emp_id || r.emp_email}__${r.month_year}`;
       if (!empMonthMap[key]) {
         empMonthMap[key] = {
-          emp_id:     r.emp_id     || '—',
-          emp_name:   r.emp_name   || '—',
-          email:      r.emp_email,
+          emp_id: r.emp_id || '—',
+          emp_name: r.emp_name || '—',
+          email: r.emp_email,
           department: r.department || '—',
-          month:      r.month_year || '—',
+          month: r.month_year || '—',
           total_working: workingDaysInMonth(r.month_year),
           present: 0, full_day: 0, half_day: 0, short_day: 0,
           pending_out: 0, total_hours: 0
@@ -651,23 +584,23 @@ router.get('/export', requireHR, async (req, res) => {
       const h = r.hours_worked ? parseFloat(r.hours_worked) : null;
       if (h !== null) {
         m.present++; m.total_hours += h;
-        if (h >= 8)     m.full_day++;
+        if (h >= 8) m.full_day++;
         else if (h >= 4) m.half_day++;
-        else             m.short_day++;
+        else m.short_day++;
       } else if (r.punch_in_time) {
         m.present++; m.pending_out++;
       }
     });
 
     const h2 = [
-      'Emp ID','Employee Name','Email','Department','Month',
-      'Total Working Days','Present Days','Full Day (≥8h)','Half Day (4-8h)',
-      'Short Day (<4h)','Pending OUT','Absent Days',
-      'Total Hours Worked','Avg Hours/Day'
+      'Emp ID', 'Employee Name', 'Email', 'Department', 'Month',
+      'Total Working Days', 'Present Days', 'Full Day (≥8h)', 'Half Day (4-8h)',
+      'Short Day (<4h)', 'Pending OUT', 'Absent Days',
+      'Total Hours Worked', 'Avg Hours/Day'
     ];
     const rows2 = Object.values(empMonthMap).map(m => {
-      const absent  = Math.max(0, m.total_working - m.present);
-      const avgHrs  = m.present > 0 ? (m.total_hours / m.present).toFixed(2) : '0.00';
+      const absent = Math.max(0, m.total_working - m.present);
+      const avgHrs = m.present > 0 ? (m.total_hours / m.present).toFixed(2) : '0.00';
       return [
         m.emp_id, m.emp_name, m.email, m.department, m.month,
         m.total_working, m.present, m.full_day, m.half_day,
@@ -678,9 +611,9 @@ router.get('/export', requireHR, async (req, res) => {
 
     const ws2 = XLSX.utils.aoa_to_sheet([h2, ...rows2]);
     ws2['!cols'] = [
-      {wch:15},{wch:22},{wch:30},{wch:16},{wch:8},
-      {wch:18},{wch:14},{wch:15},{wch:15},{wch:14},{wch:13},{wch:12},
-      {wch:18},{wch:14}
+      { wch: 15 }, { wch: 22 }, { wch: 30 }, { wch: 16 }, { wch: 8 },
+      { wch: 18 }, { wch: 14 }, { wch: 15 }, { wch: 15 }, { wch: 14 }, { wch: 13 }, { wch: 12 },
+      { wch: 18 }, { wch: 14 }
     ];
     XLSX.utils.book_append_sheet(wb, ws2, 'Monthly Summary');
 
@@ -713,23 +646,23 @@ router.get('/export', requireHR, async (req, res) => {
 
     const hSummary = ['Emp ID', 'Employee Name', 'Email', 'Total Days', 'Present Days', 'Absent Days'];
     const wsSummary = XLSX.utils.aoa_to_sheet([hSummary, ...summaryRows]);
-    wsSummary['!cols'] = [{wch:15},{wch:22},{wch:30},{wch:12},{wch:14},{wch:14}];
+    wsSummary['!cols'] = [{ wch: 15 }, { wch: 22 }, { wch: 30 }, { wch: 12 }, { wch: 14 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, wsSummary, 'Attendance Report');
 
     // ── SHEET 4: Employee Master ─────────────────────────────────────────────
-    const h3    = ['Emp ID','Name','Email','Phone','Department','Designation','Status','Joined Date'];
+    const h3 = ['Emp ID', 'Name', 'Email', 'Phone', 'Department', 'Designation', 'Status', 'Joined Date'];
     const rows3 = emps.rows.map(e => [
-      e.emp_id, e.name, e.email, e.phone||'', e.department||'', e.designation||'',
+      e.emp_id, e.name, e.email, e.phone || '', e.department || '', e.designation || '',
       e.is_active ? 'Active' : 'Inactive',
       formatDateDMY(e.joined_date)
     ]);
     const ws3 = XLSX.utils.aoa_to_sheet([h3, ...rows3]);
-    ws3['!cols'] = [{wch:15},{wch:22},{wch:30},{wch:15},{wch:16},{wch:18},{wch:10},{wch:14}];
+    ws3['!cols'] = [{ wch: 15 }, { wch: 22 }, { wch: 30 }, { wch: 15 }, { wch: 16 }, { wch: 18 }, { wch: 10 }, { wch: 14 }];
     XLSX.utils.book_append_sheet(wb, ws3, 'Employee Master');
 
     // ── Send file ─────────────────────────────────────────────────────────────
-    const buf   = XLSX.write(wb, { type:'buffer', bookType:'xlsx' });
-    const fname = `IED_HRMS_Attendance_${date_from||'all'}_to_${date_to||'all'}.xlsx`;
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const fname = `IED_HRMS_Attendance_${date_from || 'all'}_to_${date_to || 'all'}.xlsx`;
     res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buf);

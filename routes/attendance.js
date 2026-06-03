@@ -278,8 +278,10 @@ router.post('/punch', async (req, res) => {
     if (!empEmail) return res.status(401).json({ success: false, message: 'Please sign in first.' });
 
     const { status, latitude, longitude, locationName } = req.body;
-    if (!status || !latitude || !longitude)
-      return res.status(400).json({ success: false, message: 'Missing required fields.' });
+    const lat = toNumberOrNull(latitude);
+    const lng = toNumberOrNull(longitude);
+    if (!status || lat === null || lng === null)
+      return res.status(400).json({ success: false, message: 'Location (latitude and longitude) is mandatory.' });
 
     await savePunch(null, empEmail, authUser.name || empEmail, status, latitude, longitude, locationName);
 

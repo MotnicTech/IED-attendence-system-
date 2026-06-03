@@ -214,7 +214,7 @@
 
   // Geolocation
   function startLoc(){
-    if(!navigator.geolocation){ setStatus('Geolocation not supported','error'); locationReady=true; syncBtns(); return; }
+    if(!navigator.geolocation){ setStatus('Geolocation not supported — punch blocked','error'); locationReady=false; syncBtns(); return; }
     navigator.geolocation.getCurrentPosition(onGot,onErr,{enableHighAccuracy:true,timeout:12000});
   }
 
@@ -228,10 +228,10 @@
   }
 
   function onErr(){
-    setStatus('Location denied — punch allowed without location','error');
-    locName='Unknown'; document.getElementById('locName').textContent='Not available';
+    setStatus('Location access denied — location is mandatory to punch','error');
+    locName=''; document.getElementById('locName').textContent='Not available';
     document.getElementById('locName').classList.remove('loading-val');
-    locationReady=true; syncBtns();
+    lat=null; lng=null; locationReady=false; syncBtns();
   }
 
   function reverseGeo(la,lo){
@@ -251,7 +251,7 @@
   }
 
   function syncBtns(){
-    const ready=locationReady||(!state.canPunchIn&&!state.canPunchOut);
+    const ready=(lat !== null && lng !== null) || (!state.canPunchIn&&!state.canPunchOut);
     document.getElementById('btnIn').disabled=!ready||!state.canPunchIn;
     document.getElementById('btnOut').disabled=!ready||!state.canPunchOut;
     if(state.inTimeLabel) document.getElementById('btnIn').classList.add('done');
@@ -259,7 +259,7 @@
   }
 
   async function punch(status){
-    if(!locationReady){ showMsg('Please wait for location…','error'); return; }
+    if(lat === null || lng === null){ showMsg('Location is mandatory to mark attendance. Please enable location.','error'); return; }
     const btn=document.getElementById(status==='Punch In'?'btnIn':'btnOut');
     btn.disabled=true;
     btn.innerHTML='<span class="btn-icon">⏳</span>Saving…';

@@ -234,7 +234,10 @@
     function startLocation() {
       setStatus('Fetching location...', 'loading');
       if (!navigator.geolocation) {
-        setStatus('Geolocation not supported', 'error');
+        setStatus('Geolocation not supported — punch blocked', 'error');
+        userLat = null; userLng = null;
+        locationReady = false;
+        syncButtonState();
         return;
       }
       navigator.geolocation.getCurrentPosition(onLocationSuccess, onLocationError, {
@@ -254,11 +257,12 @@
     }
 
     function onLocationError(err) {
-      setStatus('Location access denied — please allow location', 'error');
-      locationName = 'Unknown';
+      setStatus('Location access denied — location is mandatory to punch', 'error');
+      locationName = '';
       document.getElementById('locationName').textContent = 'Location not available';
-      locationReady = true;
-      syncButtonState(); // still allow punch with unknown location
+      userLat = null; userLng = null;
+      locationReady = false;
+      syncButtonState();
     }
 
     function reverseGeocode(lat, lng) {
@@ -289,7 +293,7 @@
     function syncButtonState() {
       const btnIn = document.getElementById('btnIn');
       const btnOut = document.getElementById('btnOut');
-      const allowInteraction = locationReady || (!attendanceState.canPunchIn && !attendanceState.canPunchOut);
+      const allowInteraction = (userLat !== null && userLng !== null) || (!attendanceState.canPunchIn && !attendanceState.canPunchOut);
       btnIn.disabled = !allowInteraction || !attendanceState.canPunchIn;
       btnOut.disabled = !allowInteraction || !attendanceState.canPunchOut;
       btnIn.classList.toggle('done', !!attendanceState.inTimeLabel);
@@ -299,8 +303,8 @@
     // ─── PUNCH ────────────────────────────────────────────────────────────────
     async function punch(status) {
       if (!currentUser || !userEmail) return showMsg('Please sign in with your Employee ID first', 'error');
-      if (!userLat) {
-        showMsg('Location not yet available. Please wait...', 'error');
+      if (userLat === null || userLng === null) {
+        showMsg('Location is mandatory to mark attendance. Please enable location.', 'error');
         startLocation();
         return;
       } 

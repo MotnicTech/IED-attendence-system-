@@ -3,20 +3,17 @@
 
 require('dotenv').config();
 
-const express        = require('express');
-const session        = require('express-session');
-const path           = require('path');
+const express = require('express');
+const session = require('express-session');
+const path = require('path');
 
-const { pool, initDB }         = require('./db');          // db/index.js
+const { pool, initDB } = require('./db');          // db/index.js
 const { requireHR,
-        requireEmployee }      = require('./middleware/auth'); // middleware/auth.js
-const hrRouter                 = require('./routes/hr');       // routes/hr.js
+  requireEmployee } = require('./middleware/auth'); // middleware/auth.js
+const hrRouter = require('./routes/hr');       // routes/hr.js
 
-const app  = express();     
-const PORT = process.env.PORT || 4000;  
-
-// Trust proxy headers (X-Forwarded-Proto) in production behind Render/reverse proxy
-app.set('trust proxy', 1);
+const app = express();
+const PORT = process.env.PORT || 4000;
 
 // ── VIEW ENGINE ───────────────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
@@ -28,14 +25,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
-  secret:            process.env.SESSION_SECRET || 'ied-hrms-secret-change-in-prod',
-  resave:            false,
+  secret: process.env.SESSION_SECRET || 'ied-hrms-secret-change-in-prod',
+  resave: false,
   saveUninitialized: false,
-  rolling:           true,
+  rolling: true,
   cookie: {
-    secure:  process.env.NODE_ENV === 'production',
-    sameSite:'lax',
-    maxAge:  30 * 24 * 60 * 60 * 1000   // 30 days
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000   // 30 days
   }
 }));
 
@@ -44,37 +41,37 @@ app.use(session({
 // All employee logic lives in routes/attendance.js helpers + here.
 
 const bcrypt = require('bcryptjs');
-const cron   = require('node-cron');
+const cron = require('node-cron');
 const TIME_ZONE = process.env.APP_TIMEZONE || 'Asia/Kolkata';
 
 // ── Time helpers (shared) ─────────────────────────────────────────────────────
 function getZonedParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
-    timeZone: TIME_ZONE, year:'numeric', month:'2-digit', day:'2-digit',
-    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+    timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
   }).formatToParts(date);
   return parts.reduce((a, p) => { if (p.type !== 'literal') a[p.type] = p.value; return a; }, {});
 }
-function getLocalDateKey(d = new Date()) { const z=getZonedParts(d); return `${z.year}-${z.month}-${z.day}`; }
-function getMonthYearKey(d = new Date()) { const z=getZonedParts(d); return `${z.month}/${String(z.year).slice(2)}`; }
+function getLocalDateKey(d = new Date()) { const z = getZonedParts(d); return `${z.year}-${z.month}-${z.day}`; }
+function getMonthYearKey(d = new Date()) { const z = getZonedParts(d); return `${z.month}/${String(z.year).slice(2)}`; }
 function getIstTimestampString(d = new Date()) {
-  const z=getZonedParts(d), ms=String(d.getMilliseconds()).padStart(3,'0');
+  const z = getZonedParts(d), ms = String(d.getMilliseconds()).padStart(3, '0');
   return `${z.year}-${z.month}-${z.day} ${z.hour}:${z.minute}:${z.second}.${ms}`;
 }
 function formatTimeHHMM(v) {
   if (!v) return null;
-  const t=String(v); const tp=t.includes('T')?t.split('T')[1]:(t.split(' ')[1]||t);
-  return tp.slice(0,5);
+  const t = String(v); const tp = t.includes('T') ? t.split('T')[1] : (t.split(' ')[1] || t);
+  return tp.slice(0, 5);
 }
 function formatDateDMY(v) {
-  if (!v) return '—'; const t=String(v);
-  const dp=t.includes('T')?t.split('T')[0]:t.split(' ')[0];
-  const [y,m,d]=dp.split('-');
-  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  return `${d} ${months[parseInt(m,10)-1]||m} ${y}`;
+  if (!v) return '—'; const t = String(v);
+  const dp = t.includes('T') ? t.split('T')[0] : t.split(' ')[0];
+  const [y, m, d] = dp.split('-');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${d} ${months[parseInt(m, 10) - 1] || m} ${y}`;
 }
-function toNum(v) { if(v===undefined||v===null||v==='')return null; const p=parseFloat(v); return isFinite(p)?p:null; }
-function mapLink(lat,lng) { const la=toNum(lat),lo=toNum(lng); if(la===null||lo===null)return null; return `https://www.google.com/maps?q=${la},${lo}`; }
+function toNum(v) { if (v === undefined || v === null || v === '') return null; const p = parseFloat(v); return isFinite(p) ? p : null; }
+function mapLink(lat, lng) { const la = toNum(lat), lo = toNum(lng); if (la === null || lo === null) return null; return `https://www.google.com/maps?q=${la},${lo}`; }
 
 // ── Employee Express Router ───────────────────────────────────────────────────
 const empRouter = require('express').Router();
@@ -114,7 +111,7 @@ empRouter.get('/logout', (req, res) => {
 empRouter.get('/attendance', requireEmployee, (req, res) => {
   res.render('emp-attendance', { employee: req.session.employee });
 });
- 
+
 // GET /emp/api/today — current day state JSON
 empRouter.get('/api/today', requireEmployee, async (req, res) => {
   const emp = req.session.employee;
@@ -126,12 +123,12 @@ empRouter.get('/api/today', requireEmployee, async (req, res) => {
     );
     const record = result.rows[0] || null;
     res.json({
-      success:      true,
-      date:         today,
+      success: true,
+      date: today,
       record,
-      canPunchIn:   !record || (!record.punch_in_time && !record.punch_out_time),
-      canPunchOut:  !!record && !!record.punch_in_time && !record.punch_out_time,
-      inTimeLabel:  formatTimeHHMM(record && record.punch_in_time),
+      canPunchIn: !record || (!record.punch_in_time && !record.punch_out_time),
+      canPunchOut: !!record && !!record.punch_in_time && !record.punch_out_time,
+      inTimeLabel: formatTimeHHMM(record && record.punch_in_time),
       outTimeLabel: formatTimeHHMM(record && record.punch_out_time)
     });
   } catch (err) {
@@ -147,14 +144,19 @@ empRouter.post('/api/punch', requireEmployee, async (req, res) => {
   if (!['Punch In', 'Punch Out'].includes(status))
     return res.status(400).json({ success: false, message: 'Invalid punch status.' });
 
-  const now       = new Date();
+  const now = new Date();
   const timestamp = getIstTimestampString(now);
-  const dateOnly  = getLocalDateKey(now);
+  const dateOnly = getLocalDateKey(now);
   const monthYear = getMonthYearKey(now);
-  const lat       = toNum(latitude);
-  const lng       = toNum(longitude);
-  const locLabel  = (locationName || '').trim() || 'Unknown';
-  const mLink     = mapLink(lat, lng);
+  const lat = toNum(latitude);
+  const lng = toNum(longitude);
+
+  if (lat === null || lng === null) {
+    return res.status(400).json({ success: false, message: 'Location (latitude and longitude) is mandatory.' });
+  }
+
+  const locLabel = (locationName || '').trim() || 'Unknown';
+  const mLink = mapLink(lat, lng);
   const isPunchIn = status === 'Punch In';
 
   try {
@@ -231,14 +233,14 @@ empRouter.get('/report', requireEmployee, async (req, res) => {
     );
 
     // Compute summary
-    const summary = { total_present:0, full_day:0, half_day:0, short_day:0, pending_out:0, total_hours:0 };
+    const summary = { total_present: 0, full_day: 0, half_day: 0, short_day: 0, pending_out: 0, total_hours: 0 };
     logs.rows.forEach(r => {
       const h = r.hours_worked ? parseFloat(r.hours_worked) : null;
       if (h !== null) {
         summary.total_present++; summary.total_hours += h;
-        if (h >= 8)      summary.full_day++;
+        if (h >= 8) summary.full_day++;
         else if (h >= 4) summary.half_day++;
-        else             summary.short_day++;
+        else summary.short_day++;
       } else if (r.punch_in_time) {
         summary.total_present++; summary.pending_out++;
       }
@@ -250,11 +252,11 @@ empRouter.get('/report', requireEmployee, async (req, res) => {
     );
 
     res.render('emp-report', {
-      employee:        req.session.employee,
-      logs:            logs.rows,
+      employee: req.session.employee,
+      logs: logs.rows,
       summary,
-      months:          months.rows.map(r => r.month_year),
-      selected_month:  month_year || '',
+      months: months.rows.map(r => r.month_year),
+      selected_month: month_year || '',
       formatTimeHHMM,
       formatDateDMY
     });
@@ -276,7 +278,7 @@ app.use('/hr', hrRouter);
 // ── ROOT REDIRECT ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   if (req.session.employee) return res.redirect('/emp/attendance');
-  if (req.session.hr)       return res.redirect('/hr/dashboard');
+  if (req.session.hr) return res.redirect('/hr/dashboard');
   res.redirect('/emp/login');
 });
 
@@ -311,7 +313,7 @@ async function start() {
   cron.schedule('0 0 * * *', async () => {
     try {
       const todayKey = getLocalDateKey();
-      const pending  = await pool.query(
+      const pending = await pool.query(
         `SELECT id, emp_id, emp_email, date FROM attendance_logs
           WHERE punch_in_time IS NOT NULL AND punch_out_time IS NULL AND date < $1`,
         [todayKey]
