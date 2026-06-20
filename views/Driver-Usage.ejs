@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>Driver Attendance</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+}
+
+body{
+font-family:'DM Sans',sans-serif;
+background:#f6f2eb;
+color:#1b1b1b;
+}
+
+header{
+
+height:65px;
+background:#24573b;
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:0 25px;
+color:white;
+
+}
+
+.logo{
+
+display:flex;
+align-items:center;
+
+}
+
+.logo img{
+
+height:42px;
+margin-right:10px;
+
+}
+
+.container{
+
+max-width:650px;
+margin:25px auto;
+padding:15px;
+
+}
+
+.card{
+
+background:white;
+border-radius:20px;
+padding:20px;
+margin-bottom:20px;
+box-shadow:0 5px 18px rgba(0,0,0,.08);
+
+}
+
+.driver-top{
+
+display:flex;
+justify-content:space-between;
+align-items:center;
+
+}
+
+.avatar{
+
+width:60px;
+height:60px;
+background:#1e3a5f;
+border-radius:50%;
+display:flex;
+justify-content:center;
+align-items:center;
+font-size:24px;
+font-weight:bold;
+color:white;
+
+}
+
+.driver-info{
+
+flex:1;
+margin-left:15px;
+
+}
+
+.driver-name{
+
+font-size:20px;
+font-weight:700;
+
+}
+
+.driver-id{
+
+font-size:14px;
+color:#777;
+
+}
+
+.live-time{
+
+text-align:right;
+
+}
+
+.clock{
+
+font-size:26px;
+font-weight:700;
+font-family:Syne;
+
+}
+
+.info-grid{
+
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:15px;
+margin-top:20px;
+
+}
+
+.info-box{
+
+background:#fafafa;
+border-radius:15px;
+padding:15px;
+
+}
+
+.info-title{
+
+font-size:13px;
+color:#777;
+margin-bottom:5px;
+
+}
+
+.info-value{
+
+font-weight:600;
+
+}
+
+.section-title{
+
+font-size:20px;
+font-weight:700;
+margin-bottom:18px;
+
+}
+
+.form-group{
+
+margin-bottom:15px;
+
+}
+
+label{
+
+display:block;
+margin-bottom:6px;
+font-weight:600;
+
+}
+
+input[type=text],
+input[type=number]{
+
+width:100%;
+height:48px;
+padding:12px;
+border:1px solid #ddd;
+border-radius:10px;
+font-size:15px;
+
+}
+
+input[type=file]{
+
+margin-top:5px;
+
+}
+
+.photo-preview{
+
+margin-top:10px;
+display:none;
+
+}
+
+.photo-preview img{
+
+width:100%;
+border-radius:10px;
+
+}
+
+.btn{
+
+width:100%;
+height:52px;
+border:none;
+border-radius:12px;
+font-size:17px;
+font-weight:bold;
+cursor:pointer;
+
+}
+
+.btn-in{
+
+background:#2d6a4f;
+color:white;
+
+}
+
+.btn-out{
+
+background:#c94a2b;
+color:white;
+
+}
+
+.summary{
+
+background:#fff8ef;
+border-radius:15px;
+padding:15px;
+margin-top:20px;
+
+}
+
+.summary-row{
+
+display:flex;
+justify-content:space-between;
+margin:8px 0;
+
+}
+
+.status{
+
+text-align:center;
+margin-top:20px;
+font-weight:600;
+color:#2d6a4f;
+
+}
+
+textarea{
+
+width:100%;
+padding:12px;
+border:1px solid #ddd;
+border-radius:10px;
+resize:vertical;
+font-size:15px;
+font-family:'DM Sans',sans-serif;
+
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<div class="logo">
+
+<img src="/images/IED_LOGO.jpg"
+onerror="this.style.display='none'">
+
+<h3>IED Driver Attendance</h3>
+
+</div>
+
+<div>
+
+<%= driver.driver_code %>
+
+</div>
+
+</header>
+
+<div class="container">
+
+<div class="card">
+
+<div class="driver-top">
+
+<div class="avatar">
+
+<%= driver.name.charAt(0).toUpperCase() %>
+
+</div>
+
+<div class="driver-info">
+
+<div class="driver-name">
+
+<%= driver.name %>
+
+</div>
+
+<div class="driver-id">
+
+Driver ID :
+<strong><%= driver.driver_code %></strong>
+
+</div>
+
+</div>
+
+<div class="live-time">
+
+<div class="clock"
+id="clock">
+
+--:--
+
+</div>
+
+<div id="todayDate">
+
+</div>
+
+</div>
+
+</div>
+
+<div class="info-grid">
+
+<div class="info-box">
+
+
+
+
+
+
+</div>
+
+</div>
+
+<!-- =============================== -->
+
+<div class="card">
+
+<div class="section-title">
+
+🟢 Punch IN
+
+</div>
+
+<div class="form-group">
+
+<label>
+
+Starting KM
+
+</label>
+
+<input
+type="number"
+id="startKm"
+placeholder="Enter Current Vehicle KM">
+
+</div>
+
+<div class="form-group">
+
+<label>
+
+Upload Odometer Photo
+
+</label>
+
+<input
+type="file"
+id="startPhoto"
+accept="image/*"
+capture="environment">
+
+<div
+class="photo-preview"
+id="startPreview">
+
+<img id="startImg">
+
+</div>
+
+</div>
+
+<button
+
+class="btn btn-in"
+
+id="btnPunchIn">
+
+Punch IN
+
+</button>
+
+</div>
+
+<!-- =============================== -->
+
+<div class="card">
+
+<div class="section-title">
+
+🔴 Punch OUT
+
+</div>
+
+<div class="form-group">
+
+<div class="form-group">
+
+<label>
+
+Today's Route
+
+</label>
+
+<textarea
+id="routeText"
+rows="4"
+placeholder="Example:
+
+Office → Dholka → Division Office → Office"></textarea>
+
+</div>
+
+<input
+type="number"
+id="endKm"
+placeholder="Enter Current Vehicle KM">
+
+</div>
+
+<div class="form-group">
+
+<label>
+
+Upload Odometer Photo
+
+</label>
+
+<input
+type="file"
+id="endPhoto"
+accept="image/*"
+capture="environment">
+
+<div
+class="photo-preview"
+id="endPreview">
+
+<img id="endImg">
+
+</div>
+
+</div>
+
+<button
+
+class="btn btn-out"
+
+id="btnPunchOut"
+disabled>
+
+Punch OUT
+
+</button>
+
+</div>
+
+<!-- =============================== -->
+
+
+<div
+
+class="status"
+
+id="statusText">
+
+Waiting for GPS...
+
+</div>
+
+</div>
+
+<script>
+
+let latitude=null;
+let longitude=null;
+let locationName="";
+let trackingTimer=null;
+
+let todayRecord=null;
+
+function updateClock(){
+
+const now=new Date();
+
+document.getElementById("clock").innerHTML=
+now.toLocaleTimeString([],{
+hour:"2-digit",
+minute:"2-digit",
+second:"2-digit"
+});
+
+document.getElementById("todayDate").innerHTML=
+now.toLocaleDateString([],{
+weekday:"long",
+day:"2-digit",
+month:"long",
+year:"numeric"
+});
+
+}
+
+setInterval(updateClock,1000);
+
+updateClock();
+
+
+
+// ===============================
+// PHOTO PREVIEW
+// ===============================
+
+document
+.getElementById("startPhoto")
+.addEventListener("change",function(){
+
+const file=this.files[0];
+
+if(!file)return;
+
+document
+.getElementById("startPreview")
+.style.display="block";
+
+document
+.getElementById("startImg")
+.src=URL.createObjectURL(file);
+
+});
+
+
+
+document
+.getElementById("endPhoto")
+.addEventListener("change",function(){
+
+const file=this.files[0];
+
+if(!file)return;
+
+document
+.getElementById("endPreview")
+.style.display="block";
+
+document
+.getElementById("endImg")
+.src=URL.createObjectURL(file);
+
+});
+
+
+
+// ===============================
+// GPS
+// ===============================
+
+async function fetchLocation(){
+
+if(!navigator.geolocation){
+
+document
+.getElementById("statusText")
+.innerHTML="GPS not supported.";
+
+return;
+
+}
+
+navigator.geolocation.getCurrentPosition(
+
+async(position)=>{
+
+console.log("GPS Success");
+console.log(position);
+
+latitude=position.coords.latitude;
+
+longitude=position.coords.longitude;
+
+document.getElementById("statusText").innerHTML = "GPS Found";
+
+
+try{
+
+const res=
+await fetch(
+
+`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+
+);
+
+const data=
+await res.json();
+
+locationName =
+`https://www.google.com/maps?q=${latitude},${longitude}`;
+
+document.getElementById("locationName").innerHTML =
+`<a href="${locationName}" target="_blank">📍 Open Current Location</a>`;
+
+document
+.getElementById("statusText")
+.innerHTML=
+"GPS Ready";
+
+}catch(err){
+
+}
+
+},
+
+(err)=>{
+
+console.log(err);
+
+document.getElementById("statusText").innerHTML =
+"Location Error : " + err.message;
+
+},
+
+{
+
+enableHighAccuracy:true
+
+}
+
+);
+
+}
+
+fetchLocation();
+
+
+
+// ===============================
+// LIVE ROUTE TRACKING
+// ===============================
+
+function startTracking(){
+
+if(trackingTimer) return;
+
+trackingTimer=setInterval(async()=>{
+
+fetchLocation();
+
+if(latitude==null || longitude==null) return;
+
+try{
+
+const res=await fetch("/driver/api/location",{
+
+method:"POST",
+
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+
+latitude,
+longitude
+
+})
+
+});
+
+const data=await res.json();
+
+console.log("GPS Saved :",data);
+
+}catch(err){
+
+console.error("GPS Save Error :",err);
+
+}
+
+},30000);
+
+}
+
+// ===============================
+// LOAD TODAY'S RECORD
+// ===============================
+
+async function loadToday(){
+
+const res=
+await fetch("/driver/api/today");
+
+const data=
+await res.json();
+
+if(!data.success)return;
+
+todayRecord=data.record;
+
+if(!todayRecord)return;
+
+if(todayRecord.punch_in_time){
+
+
+if(todayRecord.punch_in_time){
+
+    
+
+    const btnIn = document.getElementById("btnPunchIn");
+
+    btnIn.disabled = true;
+    btnIn.innerHTML = "✅ Punched IN";
+    btnIn.style.background = "#999";
+    btnIn.style.cursor = "not-allowed";
+
+    const btnOut = document.getElementById("btnPunchOut");
+
+    // Enable Punch OUT only if it hasn't been done yet
+    if(!todayRecord.punch_out_time){
+
+        btnOut.disabled = false;
+        btnOut.innerHTML = "🔴 Punch OUT";
+        btnOut.style.background = "#c94a2b";
+        btnOut.style.cursor = "pointer";
+
+    }else{
+
+       
+
+        btnOut.disabled = true;
+        btnOut.innerHTML = "✅ Punched OUT";
+        btnOut.style.background = "#999";
+        btnOut.style.cursor = "not-allowed";
+
+    }
+
+}
+
+document
+.getElementById("startKm")
+.value=
+todayRecord.start_km;
+
+}
+
+if(todayRecord.punch_out_time){
+
+
+
+document
+.getElementById("btnPunchOut")
+.disabled=true;
+
+
+
+
+
+}
+
+}
+
+loadToday();
+
+// ==========================================
+// PUNCH IN
+// ==========================================
+
+document
+.getElementById("btnPunchIn")
+.addEventListener("click",async()=>{
+
+if(!latitude){
+
+alert("Waiting for GPS...");
+
+return;
+
+}
+
+const km=
+document
+.getElementById("startKm")
+.value;
+
+if(km==""){
+
+alert("Enter Starting KM");
+
+return;
+
+}
+
+const photo=
+document
+.getElementById("startPhoto")
+.files[0];
+
+if(!photo){
+
+alert("Upload Start Odometer Photo");
+
+return;
+
+}
+
+const formData=new FormData();
+
+formData.append(
+"status",
+"Punch In"
+);
+
+formData.append(
+"latitude",
+latitude
+);
+
+formData.append(
+"longitude",
+longitude
+);
+
+formData.append(
+"locationName",
+locationName
+);
+
+formData.append(
+"km",
+km
+);
+
+formData.append(
+"photo",
+photo
+);
+
+const res=
+await fetch(
+
+"/driver/api/punch",
+
+{
+
+method:"POST",
+
+body:formData
+
+}
+
+);
+
+const data=
+await res.json();
+
+if(!data.success){
+
+alert(data.message);
+
+return;
+
+}
+
+document
+.getElementById("statusText")
+.innerHTML=
+"Punch IN Successful";
+const btnIn = document.getElementById("btnPunchIn");
+
+btnIn.disabled = true;
+btnIn.innerHTML = "✅ Punched IN";
+btnIn.style.background = "#999";
+btnIn.style.cursor = "not-allowed";
+
+todayRecord = {
+    punch_in_time: new Date().toISOString(),
+    punch_out_time: null
+};
+
+const btnOut = document.getElementById("btnPunchOut");
+
+btnOut.disabled = false;
+btnOut.innerHTML = "🔴 Punch OUT";
+btnOut.style.background = "#c94a2b";
+btnOut.style.cursor = "pointer";
+
+todayRecord.punch_out_time = new Date().toISOString();
+
+document.getElementById("inTime").innerHTML =
+new Date().toLocaleTimeString();
+
+document.getElementById("statusText").innerHTML =
+"✅ Punch IN Successful";
+
+startTracking();
+
+});
+
+
+
+// ==========================================
+// PUNCH OUT
+// ==========================================
+
+document
+.getElementById("btnPunchOut")
+.addEventListener("click",async()=>{
+
+const km=
+document
+.getElementById("endKm")
+.value;
+
+if(km==""){
+
+alert("Enter Ending KM");
+
+return;
+
+}
+
+const photo=
+document
+.getElementById("endPhoto")
+.files[0];
+
+if(!photo){
+
+alert("Upload Ending Odometer Photo");
+
+return;
+
+}
+
+const startKm=
+Number(
+
+document
+.getElementById("startKm")
+.value
+
+);
+
+const endKm=
+Number(km);
+
+
+
+const formData=
+new FormData();
+
+formData.append(
+"status",
+"Punch Out"
+);
+
+formData.append(
+"latitude",
+latitude
+);
+
+formData.append(
+"longitude",
+longitude
+);
+
+formData.append(
+"locationName",
+locationName
+);
+
+formData.append(
+"km",
+endKm
+);
+
+formData.append(
+"photo",
+photo
+);
+formData.append(
+"route",
+document.getElementById("routeText").value
+);
+const res=
+await fetch(
+
+"/driver/api/punch",
+
+{
+
+method:"POST",
+
+body:formData
+
+}
+
+);
+
+const data=
+await res.json();
+
+if(!data.success){
+
+alert(data.message);
+
+return;
+
+}
+
+document
+.getElementById("statusText")
+.innerHTML=
+"Punch OUT Successful";
+
+document
+.getElementById("btnPunchOut")
+.disabled=true;
+
+
+
+stopTracking();
+
+loadToday();
+
+});
+
+
+
+
+// ==========================================
+// RESTORE TRACKING
+// ==========================================
+
+if(todayRecord){
+
+if(
+
+todayRecord.punch_in_time &&
+
+!todayRecord.punch_out_time
+
+){
+
+startTracking();
+
+}
+
+}
+
+</script>
+
+</body>
+
+</html>

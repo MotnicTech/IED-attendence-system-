@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+<title>Driver Route Tracking</title>
+
+<link
+rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'DM Sans',sans-serif;
+}
+
+body{
+background:#f4f6fb;
+overflow:hidden;
+}
+
+.top-bar{
+position:absolute;
+top:20px;
+left:20px;
+z-index:9999;
+}
+
+.back-btn{
+display:inline-block;
+padding:12px 22px;
+background:#5B4CF6;
+color:#fff;
+text-decoration:none;
+border-radius:10px;
+font-size:15px;
+font-weight:700;
+box-shadow:0 6px 16px rgba(0,0,0,.18);
+transition:.25s;
+}
+
+.back-btn:hover{
+background:#4638d9;
+transform:translateY(-2px);
+}
+
+#map{
+width:100vw;
+height:100vh;
+}
+
+.leaflet-popup-content{
+font-size:14px;
+font-weight:600;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="top-bar">
+
+<a
+href="/hr/drivers"
+class="back-btn">
+
+← Back
+
+</a>
+
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+
+const points=<%- JSON.stringify(points||[]) %>;
+
+const map=L.map("map");
+
+L.tileLayer(
+
+"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+
+{
+
+maxZoom:19,
+
+attribution:"© OpenStreetMap"
+
+}
+
+).addTo(map);
+
+if(points.length>0){
+
+const route=[];
+
+points.forEach(p=>{
+
+route.push([
+
+Number(p.latitude),
+
+Number(p.longitude)
+
+]);
+
+});
+
+const polyline=L.polyline(
+
+route,
+
+{
+
+color:"#2563eb",
+
+weight:6,
+
+opacity:.9
+
+}
+
+).addTo(map);
+
+map.fitBounds(
+
+polyline.getBounds(),
+
+{
+
+padding:[40,40]
+
+}
+
+);
+
+L.marker(route[0])
+
+.addTo(map)
+
+.bindPopup("🟢 Punch In")
+
+.openPopup();
+
+L.marker(route[route.length-1])
+
+.addTo(map)
+
+.bindPopup("🔴 Punch Out");
+
+route.forEach((point,index)=>{
+
+L.circleMarker(
+
+point,
+
+{
+
+radius:4,
+
+color:"#2563eb",
+
+fillColor:"#2563eb",
+
+fillOpacity:1
+
+}
+
+)
+
+.addTo(map)
+
+.bindPopup(
+
+"Point "+(index+1)
+
+);
+
+});
+
+}else{
+
+map.setView(
+
+[23.0225,72.5714],
+
+10
+
+);
+
+L.popup()
+
+.setLatLng(
+
+[23.0225,72.5714]
+
+)
+
+.setContent(
+
+"No GPS Route Found"
+
+)
+
+.openOn(map);
+
+}
+
+</script>
+
+</body>
+
+</html>

@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Driver Management</title>
+
+<link rel="stylesheet" href="/css/driver-data.css">
+
+</head>
+
+<body>
+
+<div class="container">
+
+<% if(success){ %>
+<div class="success-msg">
+<%= success %>
+</div>
+<% } %>
+
+<% if(error){ %>
+<div class="error-msg">
+<%= error %>
+</div>
+<% } %>
+
+<!-- ========================= -->
+<!-- TOP CARDS -->
+<!-- ========================= -->
+
+<div class="stats">
+
+<div class="stat-card">
+<div class="stat-number"><%= stats.total_drivers || 0 %></div>
+<div class="stat-title">Total Drivers</div>
+</div>
+
+<div class="stat-card">
+<div class="stat-number"><%= stats.today_attendance || 0 %></div>
+<div class="stat-title">Today's Attendance</div>
+</div>
+
+<div class="stat-card">
+<div class="stat-number"><%= stats.today_km || 0 %></div>
+<div class="stat-title">Total KM Today</div>
+</div>
+
+<div class="stat-card">
+<div class="stat-number"><%= attendance.length || 0 %></div>
+<div class="stat-title">Total Records</div>
+</div>
+
+</div>
+<!-- ========================= -->
+<!-- ADD DRIVER -->
+<!-- ========================= -->
+
+<div class="form-card">
+
+<div class="table-top">
+
+<div class="table-title">
+➕ Add Driver
+</div>
+
+<button type="submit" form="addDriverForm" class="add-btn">
+Generate Driver
+</button>
+
+</div>
+
+<form id="addDriverForm" action="/hr/drivers/add" method="POST">
+
+<div class="driver-form">
+
+<div class="form-group">
+<label>Driver Name</label>
+<input type="text" name="name" placeholder="Enter Driver Name" required>
+</div>
+
+<div class="form-group">
+<label>Mobile Number</label>
+<input type="text" name="mobile" placeholder="Enter Mobile Number" required>
+</div>
+
+<div class="form-group">
+<label>Driver ID</label>
+<input type="text" placeholder="Auto Generated" readonly>
+</div>
+
+<div class="form-group">
+<label>Password</label>
+<input type="text" placeholder="Auto Generated" readonly>
+</div>
+
+</div>
+
+</form>
+
+</div>
+
+<!-- ========================= -->
+<!-- DRIVER MASTER -->
+<!-- ========================= -->
+
+<div class="table-card">
+
+<div class="table-title">
+🚗 All Drivers
+</div>
+
+<div class="card-body">
+
+<input
+type="text"
+id="driverSearch"
+placeholder="Search Driver..."
+class="search-box">
+
+<div class="table-wrap">
+
+<table id="driversTable">
+
+<thead>
+<tr>
+<th>#</th>
+<th>DRIVER ID</th>
+<th>NAME</th>
+<th>MOBILE</th>
+<th>PASSWORD</th>
+<th>STATUS</th>
+<th>CREATED</th>
+<th>ACTIONS</th>
+</tr>
+</thead>
+
+<tbody>
+
+<% drivers.forEach((driver,index)=>{ %>
+
+<tr>
+
+<td><%= index+1 %></td>
+
+<td>
+<span class="driver-id">
+<%= driver.driver_code %>
+</span>
+</td>
+
+<td><%= driver.name %></td>
+
+<td><%= driver.mobile %></td>
+
+<td>
+<span class="password-cell">
+<%= driver.password %>
+</span>
+</td>
+
+<td>
+
+<% if(driver.is_active){ %>
+
+<span class="status active">● Active</span>
+
+<% }else{ %>
+
+<span class="status inactive">● Inactive</span>
+
+<% } %>
+
+</td>
+
+<td>
+<%= new Date(driver.created_at).toLocaleString('en-IN',{
+day:'2-digit',
+month:'short',
+year:'numeric',
+hour:'2-digit',
+minute:'2-digit',
+hour12:true
+}) %>
+</td>
+<td>
+
+<form
+action="/hr/drivers/reset-password/<%= driver.id %>"
+method="POST"
+style="display:inline">
+
+<button type="submit" class="btn-reset">
+🔑 Reset Password
+</button>
+
+</form>
+
+<% if(driver.is_active){ %>
+
+<form
+action="/hr/drivers/disable/<%= driver.id %>"
+method="POST"
+style="display:inline">
+
+<button type="submit" class="btn-disable">
+⏸ Disable
+</button>
+
+</form>
+
+<% } else { %>
+
+<form
+action="/hr/drivers/enable/<%= driver.id %>"
+method="POST"
+style="display:inline">
+
+<button type="submit" class="btn-enable">
+▶ Enable
+</button>
+
+</form>
+
+<% } %>
+
+<form
+action="/hr/drivers/delete/<%= driver.id %>"
+method="POST"
+style="display:inline">
+
+<button
+type="submit"
+class="btn-delete"
+onclick="return confirm('Delete Driver?')">
+🗑 Delete
+</button>
+
+</form>
+
+</td>
+</tr>
+
+<% }) %>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- ========================= -->
+<!-- FILTER RECORDS -->
+<!-- ========================= -->
+
+<form
+action="/hr/drivers"
+method="GET">
+
+<div class="filter-card">
+
+<div class="table-title">
+🔍 Filter Records
+</div>
+
+<div class="quick-filters">
+
+<button type="button" id="todayBtn">
+Today
+</button>
+
+<button type="button" id="yesterdayBtn">
+Yesterday
+</button>
+
+<button type="button" id="weekBtn">
+This Week
+</button>
+
+<button type="button" id="monthBtn">
+This Month
+</button>
+
+<button type="button" id="lastMonthBtn">
+Last Month
+</button>
+
+</div>
+
+<div class="filter-grid">
+
+<div class="form-group">
+<label>FROM DATE</label>
+<input
+type="date"
+id="fromDate"
+name="from_date"
+value="<%= filters.from_date %>">
+</div>
+
+<div class="form-group">
+<label>TO DATE</label>
+<input
+type="date"
+id="toDate"
+name="to_date"
+value="<%= filters.to_date %>">
+</div>
+
+<div class="form-group">
+<label>DRIVER ID</label>
+<input
+type="text"
+id="driverId"
+name="driver_id"
+placeholder="DRV_01..."
+value="<%= filters.driver_id %>">
+</div>
+
+<div class="form-group">
+<label>MOBILE</label>
+<input
+type="text"
+id="mobileSearch"
+name="mobile"
+placeholder="Search Mobile..."
+value="<%= filters.mobile %>">
+</div>
+
+<div class="form-group reset-group">
+
+<label>&nbsp;</label>
+
+<div style="display:flex;gap:8px;">
+
+<button
+type="submit"
+class="btn-reset-filter">
+
+Search
+
+</button>
+
+<button
+type="button"
+id="resetBtn"
+class="btn-reset-filter">
+
+Reset
+
+</button>
+</div>
+</div>
+</div>
+</div>
+</form>
+
+<!-- ========================= -->
+<!-- ATTENDANCE TABLE -->
+<!-- ========================= -->
+
+<div class="table-card">
+
+<div class="table-title">
+📋 Driver Attendance Register
+</div>
+
+<div class="card-body">
+
+<input
+type="text"
+id="attendanceSearch"
+placeholder="Search Attendance..."
+class="search-box">
+
+<div class="attendance-table-wrap">
+
+<table id="attendanceTable">
+
+<thead>
+
+<tr>
+
+<th>#</th>
+
+<th>Date</th>
+
+<th>Day</th>
+
+<th>Driver</th>
+
+<th>Punch IN</th>
+
+<th>Start Location</th>
+
+<th>Start KM</th>
+
+<th>Start Photo</th>
+
+<th>Punch OUT</th>
+
+<th>End Location</th>
+
+<th>End KM</th>
+
+<th>End Photo</th>
+
+<th>Total KM</th>
+
+<th>Total Hours</th>
+
+<th>Route</th>
+
+<th>Route Tracking</th>
+
+</tr>
+
+</thead>
+
+<tbody>
+
+<% attendance.forEach((row,index)=>{ %>
+
+<tr>
+
+<td><%= index+1 %></td>
+
+<td><%= row.date %></td>
+
+<td><%= row.day || "-" %></td>
+
+<td>
+<b><%= row.name %></b><br>
+<span class="driver-code"><%= row.driver_code %></span>
+</td>
+
+<td>
+<%= row.punch_in_time ? new Date(row.punch_in_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : "-" %>
+</td>
+
+<td>
+
+<% if(row.start_location){ %>
+
+<a href="<%= row.start_location %>" target="_blank">
+📍 View Map
+</a>
+
+<% }else{ %>
+
+-
+
+<% } %>
+
+</td>
+
+<td><%= row.start_km || "-" %></td>
+
+<td>
+
+<% if(row.start_photo_path){ %>
+
+<a href="<%= row.start_photo_path %>" target="_blank">
+
+<img
+src="<%= row.start_photo_path %>"
+class="attendance-photo">
+
+</a>
+
+<% }else{ %>
+
+-
+
+<% } %>
+
+</td>
+
+<td>
+<%= row.punch_out_time ? new Date(row.punch_out_time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : "-" %>
+</td>
+
+<td>
+
+<% if(row.end_location){ %>
+
+<a href="<%= row.end_location %>" target="_blank">
+📍 View Map
+</a>
+
+<% }else{ %>
+
+-
+
+<% } %>
+
+</td>
+
+<td><%= row.end_km || "-" %></td>
+
+<td>
+
+<% if(row.end_photo_path){ %>
+
+<a href="<%= row.end_photo_path %>" target="_blank">
+
+<img
+src="<%= row.end_photo_path %>"
+class="attendance-photo">
+
+</a>
+
+<% }else{ %>
+
+-
+
+<% } %>
+
+</td>
+
+<td>
+<%= row.total_km || "-" %>
+</td>
+
+<td><%= row.total_hours_display || "-" %></td>
+
+<td><%= row.route || "-" %></td>
+
+<td>
+
+<a
+class="route-btn"
+href="/hr/drivers/route/<%= row.id %>">
+
+🗺 View Route
+
+</a>
+
+</td>
+
+</tr>
+
+<% }) %>
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+document
+.getElementById('driverSearch')
+.addEventListener('keyup',function(){
+
+let filter=this.value.toLowerCase();
+
+let rows=document.querySelectorAll(
+'#driversTable tbody tr'
+);
+
+rows.forEach(row=>{
+
+row.style.display=
+row.innerText.toLowerCase().includes(filter)
+? ''
+: 'none';
+
+});
+
+});
+
+document
+.getElementById('attendanceSearch')
+.addEventListener('keyup',function(){
+
+let filter=this.value.toLowerCase();
+
+let rows=document.querySelectorAll(
+'#attendanceTable tbody tr'
+);
+
+rows.forEach(row=>{
+
+row.style.display=
+row.innerText.toLowerCase().includes(filter)
+? ''
+: 'none';
+
+});
+
+});
+
+</script>
+
+
+<script>
+
+const fromDate=document.getElementById("fromDate");
+const toDate=document.getElementById("toDate");
+const todayBtn=document.getElementById("todayBtn");
+const yesterdayBtn=document.getElementById("yesterdayBtn");
+const weekBtn=document.getElementById("weekBtn");
+const monthBtn=document.getElementById("monthBtn");
+const lastMonthBtn=document.getElementById("lastMonthBtn");
+const resetBtn=document.getElementById("resetBtn");
+
+function formatDate(date){
+
+const y=date.getFullYear();
+const m=String(date.getMonth()+1).padStart(2,"0");
+const d=String(date.getDate()).padStart(2,"0");
+
+return `${y}-${m}-${d}`;
+
+}
+
+todayBtn.onclick=()=>{
+
+const today=new Date();
+
+fromDate.value=formatDate(today);
+toDate.value=formatDate(today);
+
+};
+
+yesterdayBtn.onclick=()=>{
+
+const d=new Date();
+d.setDate(d.getDate()-1);
+
+fromDate.value=formatDate(d);
+toDate.value=formatDate(d);
+
+};
+
+weekBtn.onclick=()=>{
+
+const today=new Date();
+const first=new Date(today);
+
+first.setDate(today.getDate()-today.getDay()+1);
+
+fromDate.value=formatDate(first);
+toDate.value=formatDate(today);
+
+};
+
+monthBtn.onclick=()=>{
+
+const today=new Date();
+
+const first=new Date(
+today.getFullYear(),
+today.getMonth(),
+1
+);
+
+fromDate.value=formatDate(first);
+toDate.value=formatDate(today);
+
+};
+
+lastMonthBtn.onclick=()=>{
+
+const today=new Date();
+
+const first=new Date(
+today.getFullYear(),
+today.getMonth()-1,
+1
+);
+
+const last=new Date(
+today.getFullYear(),
+today.getMonth(),
+0
+);
+
+fromDate.value=formatDate(first);
+toDate.value=formatDate(last);
+
+};
+
+resetBtn.onclick=()=>{
+
+fromDate.value="";
+toDate.value="";
+document.getElementById("driverId").value="";
+document.getElementById("mobileSearch").value="";
+
+};
+
+</script>
+
+<script>
+
+function formatDate(date){
+
+const y=date.getFullYear();
+const m=String(date.getMonth()+1).padStart(2,"0");
+const d=String(date.getDate()).padStart(2,"0");
+
+return `${y}-${m}-${d}`;
+
+}
+
+function applyFilter(from,to){
+
+document.getElementById("fromDate").value=from;
+document.getElementById("toDate").value=to;
+
+document.querySelector('form[action="/hr/drivers"]').submit();
+
+}
+
+document.getElementById("todayBtn").onclick=function(){
+
+const today=new Date();
+
+applyFilter(
+formatDate(today),
+formatDate(today)
+);
+
+};
+
+document.getElementById("yesterdayBtn").onclick=function(){
+
+const d=new Date();
+
+d.setDate(d.getDate()-1);
+
+applyFilter(
+formatDate(d),
+formatDate(d)
+);
+
+};
+
+document.getElementById("weekBtn").onclick=function(){
+
+const today=new Date();
+
+const monday=new Date(today);
+
+const day=today.getDay();
+
+const diff=(day===0)?6:day-1;
+
+monday.setDate(today.getDate()-diff);
+
+applyFilter(
+formatDate(monday),
+formatDate(today)
+);
+
+};
+
+document.getElementById("monthBtn").onclick=function(){
+
+const today=new Date();
+
+const first=new Date(
+today.getFullYear(),
+today.getMonth(),
+1
+);
+
+applyFilter(
+formatDate(first),
+formatDate(today)
+);
+
+};
+
+document.getElementById("lastMonthBtn").onclick=function(){
+
+const today=new Date();
+
+const first=new Date(
+today.getFullYear(),
+today.getMonth()-1,
+1
+);
+
+const last=new Date(
+today.getFullYear(),
+today.getMonth(),
+0
+);
+
+applyFilter(
+formatDate(first),
+formatDate(last)
+);
+
+};
+
+document.getElementById("resetBtn").onclick=function(){
+
+window.location="/hr/drivers";
+
+};
+
+</script>
+
+</body>
+</html>

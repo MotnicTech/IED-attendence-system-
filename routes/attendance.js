@@ -3,16 +3,16 @@
 // AND the new /emp/* PIN-based employee system.
 // Both share the same attendance_logs table.
 
-const express  = require('express');
-const router   = express.Router();
-const XLSX     = require('xlsx');
-const path     = require('path');
-const fs       = require('fs');
-const cron     = require('node-cron');
+const express = require('express');
+const router = express.Router();
+const XLSX = require('xlsx');
+const path = require('path');
+const fs = require('fs');
+const cron = require('node-cron');
 const { pool } = require('../db');
 
 const EXCEL_PATH = path.join(__dirname, '../data/attendance.xlsx');
-const TIME_ZONE  = process.env.APP_TIMEZONE || 'Asia/Kolkata';
+const TIME_ZONE = process.env.APP_TIMEZONE || 'Asia/Kolkata';
 
 // ─── TIME HELPERS ──────────────────────────────────────────────────────────────
 function getZonedParts(date = new Date()) {
@@ -36,14 +36,14 @@ function getMonthYearKey(date = new Date()) {
 }
 
 function getIstTimestampString(date = new Date()) {
-  const z  = getZonedParts(date);
+  const z = getZonedParts(date);
   const ms = String(date.getMilliseconds()).padStart(3, '0');
   return `${z.year}-${z.month}-${z.day} ${z.hour}:${z.minute}:${z.second}.${ms}`;
 }
 
 function formatTimeHHMM(value) {
   if (!value) return null;
-  const text     = String(value);
+  const text = String(value);
   const timePart = text.includes('T') ? text.split('T')[1] : (text.split(' ')[1] || text);
   return timePart.slice(0, 5);
 }
@@ -80,22 +80,22 @@ function getWorkbook() {
 
 function appendToExcel(rowData) {
   try {
-    const wb        = getWorkbook();
+    const wb = getWorkbook();
     const sheetName = wb.SheetNames[0];
-    const ws        = wb.Sheets[sheetName];
-    const data      = XLSX.utils.sheet_to_json(ws, { header: 1 });
-    const lat       = toNumberOrNull(rowData.latitude);
-    const lng       = toNumberOrNull(rowData.longitude);
+    const ws = wb.Sheets[sheetName];
+    const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const lat = toNumberOrNull(rowData.latitude);
+    const lng = toNumberOrNull(rowData.longitude);
     data.push([
-      rowData.emp_id      || '',
-      rowData.name        || '',
+      rowData.emp_id || '',
+      rowData.name || '',
       rowData.email,
       rowData.status,
-      lat  !== null ? lat  : '',
-      lng  !== null ? lng  : '',
+      lat !== null ? lat : '',
+      lng !== null ? lng : '',
       rowData.timestamp,
       rowData.locationName || 'Unknown',
-      rowData.monthYear   || getMonthYearKey(),
+      rowData.monthYear || getMonthYearKey(),
       buildMapLink(lat, lng) || ''
     ]);
     wb.Sheets[sheetName] = XLSX.utils.aoa_to_sheet(data);
@@ -130,27 +130,27 @@ async function getTodayAttendanceState(empId, empEmail) {
 
   const record = result.rows[0] || null;
   return {
-    date:         today,
+    date: today,
     record,
-    canPunchIn:   !record || (!record.punch_in_time && !record.punch_out_time),
-    canPunchOut:  !!record && !!record.punch_in_time && !record.punch_out_time,
-    inTimeLabel:  formatTimeHHMM(record && record.punch_in_time),
+    canPunchIn: !record || (!record.punch_in_time && !record.punch_out_time),
+    canPunchOut: !!record && !!record.punch_in_time && !record.punch_out_time,
+    inTimeLabel: formatTimeHHMM(record && record.punch_in_time),
     outTimeLabel: formatTimeHHMM(record && record.punch_out_time)
   };
 }
 
 // ─── CORE PUNCH SAVE ───────────────────────────────────────────────────────────
 async function savePunch(empId, empEmail, empName, status, latitude, longitude, locationName) {
-  const now        = new Date();
-  const timestamp  = getIstTimestampString(now);
-  const dateOnly   = getLocalDateKey(now);
-  const monthYear  = getMonthYearKey(now);
-  const isPunchIn  = status === 'Punch In';
+  const now = new Date();
+  const timestamp = getIstTimestampString(now);
+  const dateOnly = getLocalDateKey(now);
+  const monthYear = getMonthYearKey(now);
+  const isPunchIn = status === 'Punch In';
   const isPunchOut = status === 'Punch Out';
-  const lat        = toNumberOrNull(latitude);
-  const lng        = toNumberOrNull(longitude);
-  const locLabel   = (locationName || '').trim() || 'Unknown';
-  const mapLink    = buildMapLink(lat, lng);
+  const lat = toNumberOrNull(latitude);
+  const lng = toNumberOrNull(longitude);
+  const locLabel = (locationName || '').trim() || 'Unknown';
+  const mapLink = buildMapLink(lat, lng);
 
   if (!isPunchIn && !isPunchOut) throw new Error('Invalid punch status.');
 
@@ -205,7 +205,7 @@ async function savePunch(empId, empEmail, empName, status, latitude, longitude, 
 // ─── AUTO PUNCH-OUT ────────────────────────────────────────────────────────────
 async function autoPunchOutPendingRecords(referenceTime = new Date()) {
   const todayKey = getLocalDateKey(referenceTime);
-  const pending  = await pool.query(
+  const pending = await pool.query(
     `SELECT id, emp_id, emp_email, date
        FROM attendance_logs
       WHERE punch_in_time IS NOT NULL
@@ -258,8 +258,8 @@ router.get('/', (req, res) => {
 
 // ── GET /api/attendance/today ─── Used by index.ejs frontend ──────────────────
 router.get('/api/attendance/today', async (req, res) => {
-  const authUser    = req.user || req.session.user;
-  const empEmail    = authUser?.email?.toLowerCase() || '';
+  const authUser = req.user || req.session.user;
+  const empEmail = authUser?.email?.toLowerCase() || '';
   if (!empEmail) return res.status(401).json({ authenticated: false, message: 'Please sign in first.' });
 
   try {
@@ -305,8 +305,8 @@ router.get('/download', (req, res) => {
 
 // Attach helpers for use by other modules / tests
 router.autoPunchOutPendingRecords = autoPunchOutPendingRecords;
-router.scheduleAutoPunchOut       = scheduleAutoPunchOut;
-router.savePunch                  = savePunch;
-router.getTodayAttendanceState    = getTodayAttendanceState;
+router.scheduleAutoPunchOut = scheduleAutoPunchOut;
+router.savePunch = savePunch;
+router.getTodayAttendanceState = getTodayAttendanceState;
 
 module.exports = router;

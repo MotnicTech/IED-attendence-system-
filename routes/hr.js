@@ -389,7 +389,7 @@ router.get('/dashboard', requireHR, async (req, res) => {
       for (const emp of targetEmployees.rows) {
         const eId = (emp.emp_id || '').trim().toUpperCase();
         const eEmail = (emp.email || '').trim().toLowerCase();
-        
+
         const log = logsMap.get(`${dKey}__id__${eId}`) || logsMap.get(`${dKey}__email__${eEmail}`);
         if (log) {
           dailyGrid.push(log);
@@ -772,6 +772,411 @@ router.post('/setup', async (req, res) => {
   } catch (err) {
     res.render('hr-setup', { error: err.message, success: null });
   }
+});
+
+// ═══════════════════════════════════════
+// DRIVER MANAGEMENT
+// ═══════════════════════════════════════
+
+router.get('/drivers', requireHR, async (req, res) => {
+
+  const {
+    from_date,
+    to_date,
+    driver_id,
+    mobile
+  } = req.query;
+
+  let where = "WHERE 1=1";
+  const params = [];
+
+  if (from_date) {
+    params.push(from_date);
+    where += ` AND da.date >= $${params.length}`;
+  }
+
+  if (to_date) {
+    params.push(to_date);
+    where += ` AND da.date <= $${params.length}`;
+  }
+
+  if (driver_id) {
+    params.push(`%${driver_id}%`);
+    where += ` AND d.driver_code ILIKE $${params.length}`;
+  }
+
+  if (mobile) {
+    params.push(`%${mobile}%`);
+    where += ` AND d.mobile ILIKE $${params.length}`;
+  }
+
+  try {
+
+    const drivers = await pool.query(`
+SELECT *
+FROM drivers
+ORDER BY id DESC
+`);
+
+    const attendance = await pool.query(
+      `
+SELECT
+da.*,
+d.driver_code,
+d.name,
+d.mobile,
+COALESCE(
+EXTRACT(HOUR FROM da.total_hours)::INT || ' hrs ' ||
+EXTRACT(MINUTE FROM da.total_hours)::INT || ' mins',
+'-'
+) AS total_hours_display
+FROM driver_attendance da
+JOIN drivers d
+ON d.id=da.driver_id
+${where}
+ORDER BY da.date DESC,da.id DESC
+`,
+      params
+    );
+
+    const stats = await pool.query(`
+SELECT
+(SELECT COUNT(*) FROM drivers WHERE is_active=TRUE) total_drivers,
+(SELECT COUNT(*) FROM driver_attendance WHERE date=CURRENT_DATE) today_attendance,
+(SELECT COALESCE(SUM(total_km),0)
+FROM driver_attendance
+WHERE date=CURRENT_DATE) today_km
+`);
+
+    res.render("Driver-Data", {
+      hr: req.session.hr,
+      drivers: drivers.rows,
+      attendance: attendance.rows,
+      stats: stats.rows[0],
+      success: null,
+      error: null,
+      filters: {
+        from_date: from_date || "",
+        to_date: to_date || "",
+        driver_id: driver_id || "",
+        mobile: mobile || ""
+      }
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.render("Driver-Data", {
+      hr: req.session.hr,
+      drivers: [],
+      attendance: [],
+      stats: {
+        total_drivers: 0,
+        today_attendance: 0,
+        today_km: 0
+      },
+      success: null,
+      error: err.message,
+      filters: {
+        from_date: from_date || "",
+        to_date: to_date || "",
+        driver_id: driver_id || "",
+        mobile: mobile || ""
+      }
+    });
+
+  }
+
+});
+
+// EXPORT CSV
+router.get('/drivers/export/csv', requireHR, async (req, res) => {
+  const data = await pool.query(`
+    SELECT
+      da.date,
+      da.day,
+      d.driver_code,
+      d.name,
+      da.punch_in_time,
+      da.punch_out_time,
+      da.start_km,
+      da.end_km,
+      da.total_km
+    FROM driver_attendance da
+    JOIN drivers d
+      ON d.id=da.driver_id
+    ORDER BY da.date DESC
+  `);
+
+  let csv =
+    `Date,Day,Driver Code,Name,Punch In,Punch Out,Start KM,End KM,Total KM\n`;
+
+  data.rows.forEach(r => {
+    csv +=
+      `${r.date},${r.day},${r.driver_code},${r.name},${r.punch_in_time},${r.punch_out_time},${r.start_km},${r.end_km},${r.total_km}\n`;
+  });
+
+  res.header('Content-Type', 'text/csv');
+  res.attachment('driver-report.csv');
+  res.send(csv);
+});
+
+
+
+// ===============================
+// ADD NEW DRIVER
+// ===============================
+router.post('/drivers/add', requireHR, async (req, res) => {
+
+  const { name, mobile } = req.body;
+
+  try {
+
+    // Generate Next Driver Code
+    const next = await pool.query(`
+      SELECT
+      COALESCE(
+        MAX(
+          NULLIF(
+            regexp_replace(driver_code,'\\D','','g'),
+            ''
+          )::INT
+        ),
+        0
+      ) + 1 AS next_id
+      FROM drivers
+    `);
+
+    const driverCode =
+      `DRV_${String(next.rows[0].next_id).padStart(2, '0')}`;
+
+    // Generate Password
+    const password =
+      Math.random()
+        .toString(36)
+        .slice(-8)
+        .toUpperCase();
+
+    // Hash Password
+    const hash =
+      await bcrypt.hash(password, 10);
+
+    // Insert Driver
+    await pool.query(`
+      INSERT INTO drivers
+      (
+        driver_code,
+        name,
+        mobile,
+        password_hash,
+        password
+      )
+      VALUES
+      ($1,$2,$3,$4,$5)
+    `, [
+      driverCode,
+      name,
+      mobile,
+      hash,
+      password
+    ]);
+
+    res.redirect('/hr/drivers');
+
+  }
+  catch (err) {
+
+    console.error(err);
+
+    res.send(err.message);
+
+  }
+
+});
+
+// ===============================
+// RESET DRIVER PASSWORD
+// ===============================
+router.post('/drivers/reset-password/:id', requireHR, async (req, res) => {
+
+  try {
+
+    const password =
+      Math.random()
+        .toString(36)
+        .slice(-8)
+        .toUpperCase();
+
+    const hash =
+      await bcrypt.hash(password, 10);
+
+    await pool.query(
+      `UPDATE drivers
+SET password=$1,
+password_hash=$2
+WHERE id=$3`,
+      [
+        password,
+        hash,
+        req.params.id
+      ]
+    );
+
+    res.redirect('/hr/drivers');
+
+  } catch (err) {
+
+    console.error(err);
+    res.send(err.message);
+
+  }
+
+});
+
+// ===============================
+// DISABLE DRIVER
+// ===============================
+router.post('/drivers/disable/:id', requireHR, async (req, res) => {
+
+  try {
+
+    await pool.query(
+      `UPDATE drivers
+SET is_active=FALSE
+WHERE id=$1`,
+      [
+        req.params.id
+      ]
+    );
+
+    res.redirect('/hr/drivers');
+
+  } catch (err) {
+
+    console.error(err);
+    res.send(err.message);
+
+  }
+
+});
+
+// ===============================
+// ENABLE DRIVER
+// ===============================
+router.post('/drivers/enable/:id', requireHR, async (req, res) => {
+
+  try {
+
+    await pool.query(
+      `UPDATE drivers
+SET is_active=TRUE
+WHERE id=$1`,
+      [
+        req.params.id
+      ]
+    );
+
+    res.redirect('/hr/drivers');
+
+  } catch (err) {
+
+    console.error(err);
+    res.send(err.message);
+
+  }
+
+});
+
+// ===============================
+// DELETE DRIVER
+// ===============================
+router.post('/drivers/delete/:id', requireHR, async (req, res) => {
+
+  try {
+
+    await pool.query(
+      `DELETE FROM drivers
+WHERE id=$1`,
+      [
+        req.params.id
+      ]
+    );
+
+    res.redirect('/hr/drivers');
+
+  } catch (err) {
+
+    console.error(err);
+    res.send(err.message);
+
+  }
+
+});
+
+// ==========================================
+// DRIVER ROUTE VIEW
+// ==========================================
+
+router.get('/drivers/route/:id', requireHR, async (req, res) => {
+
+  try {
+
+    const attendanceId = req.params.id;
+
+    const attendance = await pool.query(
+      `
+SELECT
+da.*,
+d.name,
+d.driver_code,
+COALESCE(
+EXTRACT(HOUR FROM da.total_hours)::INT || ' hrs ' ||
+EXTRACT(MINUTE FROM da.total_hours)::INT || ' mins',
+'-'
+) AS total_hours_display
+FROM driver_attendance da
+JOIN drivers d
+ON d.id=da.driver_id
+WHERE da.id=$1
+`,
+      [attendanceId]
+    );
+
+    if (!attendance.rows.length) {
+
+      return res.send("Route not found.");
+
+    }
+
+    const points = await pool.query(
+      `
+SELECT
+latitude,
+longitude,
+timestamp
+FROM driver_route_logs
+WHERE attendance_id=$1
+ORDER BY timestamp
+`,
+      [attendanceId]
+    );
+
+    res.render("Driver-Route", {
+
+      attendance: attendance.rows[0],
+      points: points.rows
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.send(err.message);
+
+  }
+
 });
 
 module.exports = router;

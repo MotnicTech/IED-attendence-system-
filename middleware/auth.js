@@ -10,4 +10,10 @@ function requireEmployee(req, res, next) {
   return res.redirect('/emp/login');
 }
 
-module.exports = { requireHR, requireEmployee };
+function requireDriver(req, res, next) {
+  if (req.session && req.session.driver) return next();
+  return res.redirect('/driver/login');
+}
+module.exports = { requireHR, requireEmployee, requireDriver };
+
+//module.exports = { requireHR, requireEmployee };

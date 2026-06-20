@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Driver Login — IED HRMS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--ink:#0f1923;--cream:#f5f0e8;--green:#2d6a4f;--gold:#d4a843;--border:#e0d9ce;--muted:#7a7166}
+    body{
+      font-family:'DM Sans',sans-serif;background:var(--green);min-height:100vh;
+      display:flex;align-items:center;justify-content:center;
+      background-image:
+        radial-gradient(ellipse at 30% 70%, rgba(212,168,67,.15) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 20%, rgba(255,255,255,.05) 0%, transparent 50%);
+    }
+    .wrap{width:420px;max-width:90%;margin:32px}
+    .logo-area{text-align:center;margin-bottom:24px}
+    .logo-area .logo-img{height:64px;display:inline-block;margin-bottom:12px}
+    .logo-area .brand{font-size:32px;font-weight:800;line-height:1}
+    .logo-area .brand span{font-weight:400}
+    .logo-area .sub{font-size:14px;opacity:.75;margin-top:-2px}
+    .card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:24px}
+    .card-title{font-size:18px;font-weight:500;margin-bottom:4px}
+    .card-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+    .field{margin-bottom:16px}
+    .field label{display:block;font-size:13px;font-weight:500;margin-bottom:4px}
+    .field input{width:100%;padding:12px 10px;border:1px solid var(--border);border-radius:4px;font-size:15px;color:var(--ink)}
+    .field .pin-input{width:20%;text-align:center;letter-spacing:2px;font-size:17px;border-color:var(--gold)}
+    .btn{display:block;margin-top:8px;padding:12px 0;border-radius:4px;font-size:14px;font-weight:600;text-align:center;color:#fff;background:var(--ink);border:none}
+    .hint{margin-top:12px;text-align:center;font-size:11px;line-height:1.4;color:var(--muted)}
+    .error{background:#fdd; color:#900;padding:8px 12px;margin-bottom:12px;border-radius:4px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo-area">
+      <img src="/images/IED_LOGO.jpg" alt="IED" class="logo-img" onerror="this.style.display='none'"/>
+      <div class="brand">IED <span>HRMS</span></div>
+      <div class="sub">Driver Attendance Portal</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Driver Login</div>
+      <div class="card-sub">Use your Driver ID and password provided by HR</div>
+      <% if(error){ %><div class="error">⚠️ <%= error %></div><% } %>
+      <form method="POST" action="/driver/login">
+        <div class="field">
+          <label>Driver ID</label>
+          <input type="text" name="driver_code" placeholder="DRV_001" required 
+                 style="text-transform:uppercase;letter-spacing:1px;font-weight:600"
+                 autocomplete="username"/>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="••••••••" required
+                 class="pin-input" maxlength="8" autocomplete="current-password"/>
+        </div>
+        <button type="submit" class="btn">Mark Attendance →</button>
+      </form>
+      <div class="hint">Don't know your Driver ID or password?<br/>Contact your HR department.</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -11,6 +11,7 @@ const { pool, initDB } = require('./db');          // db/index.js
 const { requireHR,
   requireEmployee } = require('./middleware/auth'); // middleware/auth.js
 const hrRouter = require('./routes/hr');       // routes/hr.js
+const driverRouter = require('./routes/driver');
 
 const app = express();
 app.set('trust proxy', 1);
@@ -275,6 +276,9 @@ app.use('/emp', empRouter);
 
 // ── HR ROUTES ─────────────────────────────────────────────────────────────────
 app.use('/hr', hrRouter);
+
+// ── DRIVER ROUTES ─────────────────────
+app.use('/driver', driverRouter);
 
 // ── ROOT REDIRECT ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
