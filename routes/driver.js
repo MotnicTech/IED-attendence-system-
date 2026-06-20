@@ -30,7 +30,7 @@ const upload = multer({
 // GET /driver/login
 router.get('/login', (req, res) => {
   if (req.session.driver) return res.redirect('/driver/attendance');
-  res.render('driver-login', { error: null });
+  res.render('Driver-login', { error: null });
 });
 
 // POST /driver/login
@@ -42,11 +42,11 @@ router.post('/login', async (req, res) => {
       [driver_code.trim().toUpperCase()]
     );
     if (!r.rows.length) {
-      return res.render('driver-login', { error: 'Invalid Driver ID or inactive.' });
+      return res.render('Driver-login', { error: 'Invalid Driver ID or inactive.' });
     }
     const ok = await bcrypt.compare(password, r.rows[0].password_hash);
     if (!ok) {
-      return res.render('driver-login', { error: 'Incorrect password.' });
+      return res.render('Driver-login', { error: 'Incorrect password.' });
     }
     // Set session (no logout route provided by design)
     const drv = r.rows[0];
@@ -58,7 +58,7 @@ router.post('/login', async (req, res) => {
     res.redirect('/driver/attendance');
   } catch (err) {
     console.error(err);
-    res.render('driver-login', { error: 'Server error.' });
+    res.render('Driver-login', { error: 'Server error.' });
   }
 });
 

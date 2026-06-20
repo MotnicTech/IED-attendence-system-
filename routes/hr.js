@@ -1092,26 +1092,28 @@ WHERE id=$1`,
 // DELETE DRIVER
 // ===============================
 router.post('/drivers/delete/:id', requireHR, async (req, res) => {
-
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
 
-    await pool.query(
-      `DELETE FROM drivers
-WHERE id=$1`,
-      [
-        req.params.id
-      ]
-    );
+    // Delete related route logs
+    await client.query('DELETE FROM driver_route_logs WHERE driver_id=$1', [req.params.id]);
 
+    // Delete related attendance records
+    await client.query('DELETE FROM driver_attendance WHERE driver_id=$1', [req.params.id]);
+
+    // Delete driver
+    await client.query('DELETE FROM drivers WHERE id=$1', [req.params.id]);
+
+    await client.query('COMMIT');
     res.redirect('/hr/drivers');
-
   } catch (err) {
-
+    await client.query('ROLLBACK');
     console.error(err);
     res.send(err.message);
-
+  } finally {
+    client.release();
   }
-
 });
 
 // ==========================================
