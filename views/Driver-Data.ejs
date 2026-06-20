@@ -11,7 +11,20 @@
 </head>
 
 <body>
-
+<header>
+  <div class="h-left">
+    <img src="/images/IED_LOGO.jpg" alt="IED" class="h-logo" onerror="this.style.display='none'"/>
+    <div class="h-brand">IED <span>HRMS</span></div>
+    <nav class="h-nav">
+      <a href="/hr/dashboard">📊 Attendance</a>
+      <a href="/hr/employees" class="active">👥 Employees</a>
+    </nav>
+  </div>
+  <div class="h-right">
+    <span class="h-user">👤 <%= hr.name %></span>
+    <a href="/hr/logout" class="btn-lo">Logout</a>
+  </div>
+</header>
 <div class="container">
 
 <% if(success){ %>
