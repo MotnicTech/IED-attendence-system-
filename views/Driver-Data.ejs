@@ -7,6 +7,95 @@
 <title>Driver Management</title>
 
 <link rel="stylesheet" href="/css/driver-data.css">
+<style>
+  :root {
+    --ink: #0f1923;
+    --gold: #d4a843;
+    --rust: #c94a2b;
+  }
+  header {
+    background: var(--ink);
+    min-height: 64px;
+    padding: 10px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: 0 2px 16px rgba(0,0,0,.2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-wrap: wrap;
+  }
+  .h-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .h-logo {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    border-radius: 10px;
+    background: rgba(255,255,255,.1);
+    padding: 3px;
+  }
+  .h-brand {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -.3px;
+  }
+  .h-brand span {
+    color: var(--gold);
+  }
+  .h-nav {
+    display: flex;
+    gap: 4px;
+    margin-left: 12px;
+    flex-wrap: wrap;
+  }
+  .h-nav a {
+    color: rgba(255,255,255,.65);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 6px 14px;
+    border-radius: 8px;
+    transition: all .2s;
+  }
+  .h-nav a:hover, .h-nav a.active {
+    background: rgba(255,255,255,.12);
+    color: #fff;
+  }
+  .h-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .h-user {
+    font-size: 12.5px;
+    color: rgba(255,255,255,.7);
+    background: rgba(255,255,255,.08);
+    padding: 5px 12px;
+    border-radius: 30px;
+  }
+  .btn-out {
+    padding: 6px 14px;
+    background: var(--rust);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: 'DM Sans', sans-serif;
+  }
+</style>
 
 </head>
 
@@ -16,9 +105,9 @@
     <img src="/images/IED_LOGO.jpg" alt="IED" class="h-logo" onerror="this.style.display='none'"/>
     <div class="h-brand">IED <span>HRMS</span></div>
     <nav class="h-nav">
-      <a href="/hr/dashboard" class="active">📊 Attendance</a>
+      <a href="/hr/dashboard">📊 Attendance</a>
       <a href="/hr/employees">👥 Employees</a>
-      <a href="/hr/drivers" class="nav-btn">🚗 Driver Attendance</a>
+      <a href="/hr/drivers" class="active nav-btn">🚗 Driver Attendance</a>
     </nav>
   </div>
   <div class="h-right">
